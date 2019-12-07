@@ -64,4 +64,8 @@ The "parent" adults are flagged "mother" or "father". For sex equity representat
 e.g. if there are 3 mothers and 10 fathers, we want the 9 adults to include all 3 mothers and 6 of the 10 fathers.
 
 
+## TODO
+
+* Generalize for incoming data files (no hardcoded date-specific file names).
+* Split build scripts into separate lib class files.
 

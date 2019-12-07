@@ -1,0 +1,124 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use JSON;
+use Text::CSV_XS;
+use Data::Dump qw( dump );
+use File::Slurper qw( read_text write_text read_binary );
+
+my $usage       = "$0 datadir targetfile.csv";
+my $DATA        = shift(@ARGV) or die $usage;
+my $TARGET_FILE = shift(@ARGV) or die $usage;
+
+my $cases    = decode_json( read_text("$DATA/cases.json") );
+my $adults   = decode_json( read_text("$DATA/adults.json") );
+my $children = decode_json( read_text("$DATA/children.json") );
+
+{
+
+    package Case;
+    use Moo;
+
+    has [
+        qw(
+            case_worker_email
+            site_office_name
+            case_worker_id
+            case_worker_first_name
+            case_id
+            site_name
+            case_worker_last_name
+            survey_number
+            )
+    ] => ( is => 'ro' );
+
+    has adults   => ( is => 'rw' );
+    has children => ( is => 'rw' );
+}
+
+{
+
+    package Client;
+    use Moo;
+
+    has [
+        qw(
+            last_name
+            work_phone
+            address_two
+            case_id
+            role
+            email
+            state
+            first_name
+            home_phone
+            dob
+            kids_client_id
+            city
+            sex
+            mobile_phone
+            address_one
+            zipcode
+            )
+    ] => ( is => 'ro' );
+
+}
+
+{
+
+    package Adult;
+    use Moo;
+
+    extends 'Client';
+
+}
+
+{
+
+    package Child;
+    use Moo;
+
+    extends 'Client';
+}
+
+{
+
+    package CaseWorker;
+    use Moo;
+
+    has id    => ( is => 'ro' );
+    has cases => ( is => 'rw' );
+}
+
+# unwind adults and children to group by case
+my $case_groups = {};
+for my $adult_id ( keys %$adults ) {
+    my $adult = Adult->new( $adults->{$adult_id} );
+    push @{ $case_groups->{ $adult->case_id }->{adults} }, $adult;
+}
+for my $child_id ( keys %$children ) {
+    my $child = Child->new( $children->{$child_id} );
+    push @{ $case_groups->{ $child->case_id }->{children} }, $child;
+}
+
+# group cases by worker
+my %worker_cases;
+my %workers;
+for my $case_id ( keys %$cases ) {
+    my $case      = Case->new( $cases->{$case_id} );
+    my $worker_id = $case->case_worker_id;
+
+    $case->adults( $case_groups->{$case_id}->{adults} );
+    $case->children( $case_groups->{$case_id}->{children} );
+
+    push @{ $worker_cases{$worker_id} }, $case;
+}
+
+for my $worker_id ( keys %worker_cases ) {
+    my $worker = CaseWorker->new( id => $worker_id );
+    $worker->cases( $worker_cases{$worker_id} );
+    $workers{$worker_id} = $worker;
+}
+
+#dump \%workers;
