@@ -15,11 +15,13 @@ my $contact_file = "$DATA/CAS_INV_ELECTRONIC_CONTACT_INFO_12042019.json";
 my $address_file = "$DATA/CAS_INV_ADDRESS_INFO_12042019.json";
 my $history_file = "$DATA/CAS_INV_IPV_HISTORY_12042019.json";
 my $client_file  = "$DATA/CAS_INV_IPV_HISTORY_CLIENTS_12042019.json";
+my $email_file   = "$DATA/caseworker-emails.json";
 
 my $contacts  = decode_json( read_text($contact_file) );
 my $addresses = decode_json( read_text($address_file) );
 my $history   = decode_json( read_text($history_file) );
 my $clients   = decode_json( read_binary($client_file) );
+my $emails    = decode_json( read_text($email_file) );
 
 # build out cases, adults, children
 # clients are adults or children
@@ -249,6 +251,13 @@ my ( %cases, %adults, %childs );
         $self->clean_name( ( split( ', ', $self->CASEWORKER_NAME ) )[0] );
     }
 
+    sub email_id {
+        my $self = shift;
+        return sprintf( "%s-%s",
+            lc( $self->first_name ),
+            lc( $self->last_name ) );
+    }
+
     sub transform {
         my $self = shift;
         return {
@@ -264,6 +273,20 @@ my ( %cases, %adults, %childs );
     }
 }
 
+{
+
+    package Email;
+    use Moo;
+
+    has [qw( first last email )] => ( is => 'ro' );
+
+    sub id {
+        my $self = shift;
+        return sprintf( "%s-%s", lc( $self->first ), lc( $self->last ) );
+    }
+
+}
+
 # build lookups first so we can find it per client
 my %addr_lookup;
 for my $addr_hash (@$addresses) {
@@ -275,15 +298,22 @@ for my $contact_hash (@$contacts) {
     my $contact = Contact->new($contact_hash);
     $contact_lookup{ $contact->id } = $contact;
 }
+my %email_lookup;
+for my $email_hash (@$emails) {
+    my $email = Email->new($email_hash);
+    next unless $email->email;
+    $email_lookup{ $email->id } = $email;
+}
 
 # build adults and children
 my $adult_count = 0;
 my $child_count = 0;
 
 print "Found " . scalar(@$clients) . " clients\n";
-
 for my $client_hash (@$clients) {
     my $client = Client->new($client_hash);
+
+    next unless $client->id;
 
     if ( $client->CYF_ROLE eq 'Mother' or $client->CYF_ROLE eq 'Father' ) {
         $adult_count++;
@@ -302,8 +332,13 @@ print "Found " . scalar(@$history) . " cases\n";
 my $case_count = 0;
 for my $case_hash (@$history) {
     my $case = Case->new($case_hash);
+    next unless $case->id;
     next unless $case->CASEWORKER_NAME;
+
     $case_count++;
+    if ( $email_lookup{ $case->email_id } ) {
+        $case->email( $email_lookup{ $case->email_id }->email );
+    }
     $cases{ $case->id } = $case->transform;
 }
 
