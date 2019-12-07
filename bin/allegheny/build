@@ -227,7 +227,7 @@ my ( %cases, %adults, %childs );
             )
     ] => ( is => 'ro' );
 
-    has email => ( is => 'rw', default => sub {'unknown@example.com'} );
+    has email => ( is => 'rw', default => sub { $_[0]->default_email } );
 
     sub id {
         my $self = shift;
@@ -241,6 +241,15 @@ my ( %cases, %adults, %childs );
         return $n;
     }
 
+    sub default_email {
+        my $self = shift;
+
+        return 'unknown@example.com' unless $self->CASEWORKER_NAME;
+
+        return sprintf( "%s.%s\@alleghenycounty.us",
+            $self->first_name_only, $self->last_name );
+    }
+
     sub first_name {
         my $self = shift;
         $self->clean_name( ( split( ', ', $self->CASEWORKER_NAME ) )[1] );
@@ -252,10 +261,10 @@ my ( %cases, %adults, %childs );
     }
 
     sub first_name_only {
-      my $self = shift;
-      my $n = $self->first_name;
-      $n =~ s/\ \w+\.$//g;
-      return $n;
+        my $self = shift;
+        my $n    = $self->first_name;
+        $n =~ s/\ \w+\.$//g;
+        return $n;
     }
 
     sub email_id {
