@@ -1,0 +1,323 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use JSON;
+use Text::CSV_XS;
+use Data::Dump qw( dump );
+use File::Slurper qw( read_text write_text read_binary );
+
+my $usage = "$0 datadir";
+die $usage unless @ARGV;
+my $DATA = shift(@ARGV);
+
+my $contact_file = "$DATA/CAS_INV_ELECTRONIC_CONTACT_INFO_12042019.json";
+my $address_file = "$DATA/CAS_INV_ADDRESS_INFO_12042019.json";
+my $history_file = "$DATA/CAS_INV_IPV_HISTORY_12042019.json";
+my $client_file  = "$DATA/CAS_INV_IPV_HISTORY_CLIENTS_12042019.json";
+
+my $contacts  = decode_json( read_text($contact_file) );
+my $addresses = decode_json( read_text($address_file) );
+my $history   = decode_json( read_text($history_file) );
+my $clients   = decode_json( read_binary($client_file) );
+
+# build out cases, adults, children
+# clients are adults or children
+
+my ( %cases, %adults, %childs );
+
+{
+
+    package Contact;
+    use Moo;
+
+    has [
+        qw(
+            ENTITY_ID
+            CL_ID
+            CL_ID1
+            SEQ_NBR
+            LST_UPDT_DT
+            START_DT
+            END_DT
+            HOME_PH_NBR
+            WRK_PH_NBR
+            WRK_EXT_NBR
+            CELL_NBR
+            EMAIL_ADDR_TXT
+            )
+    ] => ( is => 'ro' );
+
+    sub id {
+        my $self = shift;
+        return join( '-', $self->ENTITY_ID, $self->CL_ID );
+    }
+
+    sub transform {
+        my $self = shift;
+
+        return {
+            home_phone => $self->HOME_PH_NBR,
+            work_phone => $self->WRK_PH_NBR
+            ? sprintf( "%s (%s)",
+                $self->WRK_PH_NBR, ( $self->WRK_EXT_NBR || '' ) )
+            : undef,
+            mobile_phone => $self->CELL_NBR,
+            email        => $self->EMAIL_ADDR_TXT
+        };
+    }
+
+}
+
+{
+
+    package Address;
+    use Moo;
+
+    has [
+        qw(
+            ENTITY_ID
+            CL_ID
+            CL_ID1
+            SEQ_NBR
+            LST_UPDT_DT
+            EFF_STRT_DT
+            EFF_END_DT
+            ADDRS_LINE1_TXT
+            ADDRS_LINE2_TXT
+            CITY_NME
+            STATE_TYP_CDE
+            ZIP_NBR_TXT
+            ZIP_EXT_NBR_TXT
+            )
+    ] => ( is => 'ro' );
+
+    sub id {
+        my $self = shift;
+        return join( '-', $self->ENTITY_ID, $self->CL_ID );
+    }
+
+    sub transform {
+        my $self = shift;
+
+        return {
+            address_one => $self->ADDRS_LINE1_TXT,
+            address_two => $self->ADDRS_LINE2_TXT,
+            city        => $self->CITY_NME,
+            state       => $self->STATE_TYP_CDE,
+            zipcode     => $self->ZIP_EXT_NBR_TXT
+            ? sprintf(
+                "%s-%s", $self->ZIP_NBR_TXT, $self->ZIP_EXT_NBR_TXT
+                )
+            : $self->ZIP_NBR_TXT
+        };
+    }
+}
+
+{
+
+    package Client;
+    use Moo;
+
+    has [
+        qw(
+            INVLV_SEQ_NBR
+            CYF_ROLE
+            CL_ID
+            LST_NME
+            FRST_NME
+            ENTITY_ID
+            SEX
+            MIDD_NME
+            BRTH_DT
+            CHILD_SW
+            )
+    ] => ( is => 'ro' );
+
+    has address => ( is => 'rw', default => sub { Address->new } );
+    has contact => ( is => 'rw', default => sub { Contact->new } );
+
+    sub id {
+        my $self = shift;
+        return
+            join( '-', $self->ENTITY_ID, $self->CL_ID, $self->INVLV_SEQ_NBR );
+    }
+
+    sub join_id {
+        my $self = shift;
+        return join( '-', $self->ENTITY_ID, $self->CL_ID );
+    }
+
+    sub dob {
+        my $self = shift;
+        return "" unless $self->BRTH_DT;
+
+        my ( $month, $day, $year2 )
+            = ( $self->BRTH_DT =~ m,^(\d+)/(\d+)/(\d+) , );   # "7/21/75 0:00"
+        my $year = $year2 > 20 ? "19$year2" : "20$year2";
+        return "$year-$month-$day";
+    }
+
+    sub transform {
+        my $self = shift;
+
+        my $addr_hash    = $self->address->transform;
+        my $contact_hash = $self->contact->transform;
+
+        return {
+            case_id        => $self->ENTITY_ID,
+            kids_client_id => $self->CL_ID,
+            first_name     => $self->FRST_NME,
+            last_name      => $self->LST_NME,
+            dob            => $self->dob,
+            role           => $self->CYF_ROLE,
+            sex            => $self->SEX,
+            address_one    => $addr_hash->{address_one},
+            address_two    => $addr_hash->{address_two},
+            city           => $addr_hash->{city},
+            state          => $addr_hash->{state},
+            zipcode        => $addr_hash->{zipcode},
+            email          => $contact_hash->{email},
+            home_phone     => $contact_hash->{home_phone},
+            work_phone     => $contact_hash->{work_phone},
+            mobile_phone   => $contact_hash->{mobile_phone},
+        };
+    }
+}
+
+{
+
+    package Case;
+    use Moo;
+
+    has [
+        qw(
+            CAS_ID
+            ENTITY_TYPE
+            OPEN_DATE
+            COUNTY
+            ASGN_ID
+            WORKER_ID
+            CASEWORKER_NAME
+            UNIT_NAME
+            SUPERVISOR_NAME
+            LAST_ASGN_STRT_DT
+            LAST_ASGN_END_DT
+            ACTIVELY_ASSIGNED
+            BIN_IPV_SVCREFS
+            MIN_IPV_SVCREFS
+            MAX_IPV_SVCREFS
+            BIN_IPV_INTAKEREFS
+            MIN_IPV_INTAKEREFS
+            MAX_IPV_INTAKEREFS
+            BIN_IPV_FASTRESP
+            MIN_IPV_FASTRESP
+            MAX_IPV_FASTRESP
+            BIN_IPV_CHLDRMVL
+            MIN_IPV_CHLDRMVL
+            MAX_IPV_CHLDRMVL
+            BIN_IPV_OVERALL
+            MIN_IPV_EVER
+            MAX_IPV_EVER
+            BIN_IPV_OMIT_INTAKE
+            MIN_IPV_OMIT_INTAKE
+            MAX_IPV_OMIT_INTAKE
+            )
+    ] => ( is => 'ro' );
+
+    has email => ( is => 'rw', default => sub {'unknown@example.com'} );
+
+    sub id {
+        my $self = shift;
+        return $self->CAS_ID;
+    }
+
+    sub clean_name {
+        my $self = shift;
+        my $n    = shift;
+        $n =~ s/^\s+|\s+$//g;
+        return $n;
+    }
+
+    sub first_name {
+        my $self = shift;
+        $self->clean_name( ( split( ', ', $self->CASEWORKER_NAME ) )[1] );
+    }
+
+    sub last_name {
+        my $self = shift;
+        $self->clean_name( ( split( ', ', $self->CASEWORKER_NAME ) )[0] );
+    }
+
+    sub transform {
+        my $self = shift;
+        return {
+            case_id                => $self->id,
+            case_worker_id         => $self->WORKER_ID,
+            case_worker_first_name => $self->first_name,
+            case_worker_last_name  => $self->last_name,
+            case_worker_email      => $self->email,
+            site_name              => 'AC',
+            site_office_name       => $self->UNIT_NAME,    # TODO
+            survey_number          => 1,                   # TODO
+        };
+    }
+}
+
+# build lookups first so we can find it per client
+my %addr_lookup;
+for my $addr_hash (@$addresses) {
+    my $address = Address->new($addr_hash);
+    $addr_lookup{ $address->id } = $address;
+}
+my %contact_lookup;
+for my $contact_hash (@$contacts) {
+    my $contact = Contact->new($contact_hash);
+    $contact_lookup{ $contact->id } = $contact;
+}
+
+# build adults and children
+my $adult_count = 0;
+my $child_count = 0;
+
+print "Found " . scalar(@$clients) . " clients\n";
+
+for my $client_hash (@$clients) {
+    my $client = Client->new($client_hash);
+
+    if ( $client->CYF_ROLE eq 'Mother' or $client->CYF_ROLE eq 'Father' ) {
+        $adult_count++;
+        $client->address( $addr_lookup{ $client->join_id } );
+        $client->contact( $contact_lookup{ $client->join_id } );
+        $adults{ $client->id } = $client->transform;
+    }
+    elsif ( $client->CHILD_SW and $client->CHILD_SW eq 'Y' ) {
+        $child_count++;
+        $childs{ $client->id } = $client->transform;
+    }
+}
+
+# build cases
+print "Found " . scalar(@$history) . " cases\n";
+my $case_count = 0;
+for my $case_hash (@$history) {
+    my $case = Case->new($case_hash);
+    next unless $case->CASEWORKER_NAME;
+    $case_count++;
+    $cases{ $case->id } = $case->transform;
+}
+
+# write out denormalized
+write_text( "$DATA/adults.json",   encode_json( \%adults ) );
+write_text( "$DATA/children.json", encode_json( \%childs ) );
+write_text( "$DATA/cases.json",    encode_json( \%cases ) );
+
+printf "Processed %s adult parents, wrote %s adults\n", $adult_count,
+    scalar( keys %adults );
+
+printf "Processed %s children, wrote %s children\n", $child_count,
+    scalar( keys %childs );
+
+printf "Processed %s cases, wrote %s cases\n", $case_count,
+    scalar( keys %cases );
+
