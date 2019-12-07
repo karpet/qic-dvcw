@@ -35,6 +35,13 @@ my $children = decode_json( read_text("$DATA/children.json") );
 
     has adults   => ( is => 'rw' );
     has children => ( is => 'rw' );
+
+    sub worker_name {
+        my $self = shift;
+        return sprintf( "%s %s",
+            $self->case_worker_first_name,
+            $self->case_worker_last_name );
+    }
 }
 
 {
@@ -109,6 +116,10 @@ for my $case_id ( keys %$cases ) {
     my $case      = Case->new( $cases->{$case_id} );
     my $worker_id = $case->case_worker_id;
 
+    if ( $case->case_worker_email =~ /example.com/ ) {
+        warn sprintf("Missing email for %s\n", $case->worker_name);
+    }
+
     $case->adults( $case_groups->{$case_id}->{adults} );
     $case->children( $case_groups->{$case_id}->{children} );
 
@@ -122,3 +133,6 @@ for my $worker_id ( keys %worker_cases ) {
 }
 
 #dump \%workers;
+
+printf "Found %s case workers for %s cases\n", scalar( keys %workers ),
+    scalar( keys %$cases );

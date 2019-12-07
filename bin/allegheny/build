@@ -251,10 +251,17 @@ my ( %cases, %adults, %childs );
         $self->clean_name( ( split( ', ', $self->CASEWORKER_NAME ) )[0] );
     }
 
+    sub first_name_only {
+      my $self = shift;
+      my $n = $self->first_name;
+      $n =~ s/\ \w+\.$//g;
+      return $n;
+    }
+
     sub email_id {
         my $self = shift;
         return sprintf( "%s-%s",
-            lc( $self->first_name ),
+            lc( $self->first_name_only ),
             lc( $self->last_name ) );
     }
 
