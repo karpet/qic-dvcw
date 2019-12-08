@@ -11,10 +11,10 @@ my $usage = "$0 datadir";
 die $usage unless @ARGV;
 my $DATA = shift(@ARGV);
 
-my $contact_file = "$DATA/CAS_INV_ELECTRONIC_CONTACT_INFO_12042019.json";
-my $address_file = "$DATA/CAS_INV_ADDRESS_INFO_12042019.json";
-my $history_file = "$DATA/CAS_INV_IPV_HISTORY_12042019.json";
-my $client_file  = "$DATA/CAS_INV_IPV_HISTORY_CLIENTS_12042019.json";
+my $contact_file = "$DATA/contacts.json";
+my $address_file = "$DATA/address.json";
+my $history_file = "$DATA/history.json";
+my $client_file  = "$DATA/clients.json";
 my $email_file   = "$DATA/caseworker-emails.json";
 
 my $contacts  = decode_json( read_text($contact_file) );
@@ -314,11 +314,15 @@ my ( %cases, %adults, %childs );
 my %addr_lookup;
 for my $addr_hash (@$addresses) {
     my $address = Address->new($addr_hash);
+    my $uniq_id = $address->id . "-" . ( $address->SEQ_NBR || 1 );
+    die "multiple addresses" if $addr_lookup{$uniq_id}++;
     $addr_lookup{ $address->id } = $address;
 }
 my %contact_lookup;
 for my $contact_hash (@$contacts) {
     my $contact = Contact->new($contact_hash);
+    my $uniq_id = $contact->id . "-" . ( $contact->SEQ_NBR || 1 );
+    die "multiple contacts" if $contact_lookup{$uniq_id}++;
     $contact_lookup{ $contact->id } = $contact;
 }
 my %email_lookup;
