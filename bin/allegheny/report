@@ -24,8 +24,8 @@ my $CSV_HEADER = [
         )
 ];
 
-# create 1..9 cells for children and adults
-for my $n ( 1 .. 9 ) {
+# create N cells for children and adults
+for my $n ( 1 .. 20 ) {
     push @$CSV_HEADER, "child_${n}_id";
     push @$CSV_HEADER, "child_${n}_first_name";
     push @$CSV_HEADER, "child_${n}_last_name";
@@ -90,7 +90,7 @@ my $children = decode_json( read_text("$DATA/children.json") );
         my $self            = shift;
         my $pfc             = $self->potential_focal_children;
         my @between_5_and_9 = grep { $_->age >= 5 && $_->age <= 9 } @$pfc;
-        my @tenyo          = grep { $_->age == 10 } @$pfc;
+        my @tenyo           = grep { $_->age == 10 } @$pfc;
         my @under5          = grep { $_->age < 5 } @$pfc;
 
         #warn dump( \@between_5_and_9 );
