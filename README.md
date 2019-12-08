@@ -77,7 +77,5 @@ e.g. if there are 3 mothers and 10 fathers, we want the 9 adults to include all 
 
 ## TODO
 
-* Generalize for incoming data files (no hardcoded date-specific file names).
 * Split build scripts into separate lib class files.
-* Most recent address for each client.
 
