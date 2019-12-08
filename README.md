@@ -6,6 +6,15 @@
 * The source or input files are the raw .csv or .xls(x) files from project sites.
 * Project site is a partner organization supplying data. There are three.
 
+
+## Target file
+
+The target .csv file has dates formatted as `yyyy/mm/dd`. This is proper ISO8601 format. If you open the .csv
+file in Excel, it may re-format all the dates as `dd/mm/yy` (which is an ambiguous format)
+but that will depend on your particular system preferences.
+
+**DO NOT SAVE THE CSV** if you open it in Excel in case Excel re-writes the dates.
+
 ## Questions
 
 ## Models
@@ -70,4 +79,5 @@ e.g. if there are 3 mothers and 10 fathers, we want the 9 adults to include all 
 
 * Generalize for incoming data files (no hardcoded date-specific file names).
 * Split build scripts into separate lib class files.
+* Most recent address for each client.
 
