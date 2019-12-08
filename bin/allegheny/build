@@ -160,6 +160,13 @@ my ( %cases, %adults, %childs );
         return "$year-$month-$day";
     }
 
+    sub clean {
+        my $self = shift;
+        my $n    = shift;
+        $n =~ s/^\s+|\s+$//g;
+        return $n;
+    }
+
     sub transform {
         my $self = shift;
 
@@ -167,22 +174,22 @@ my ( %cases, %adults, %childs );
         my $contact_hash = $self->contact->transform;
 
         return {
-            case_id        => $self->ENTITY_ID,
-            id             => $self->CL_ID,
-            first_name     => $self->FRST_NME,
-            last_name      => $self->LST_NME,
-            dob            => $self->dob,
-            role           => $self->CYF_ROLE,
-            sex            => $self->SEX,
-            address_one    => $addr_hash->{address_one},
-            address_two    => $addr_hash->{address_two},
-            city           => $addr_hash->{city},
-            state          => $addr_hash->{state},
-            zipcode        => $addr_hash->{zipcode},
-            email          => $contact_hash->{email},
-            home_phone     => $contact_hash->{home_phone},
-            work_phone     => $contact_hash->{work_phone},
-            mobile_phone   => $contact_hash->{mobile_phone},
+            case_id      => $self->ENTITY_ID,
+            id           => $self->CL_ID,
+            first_name   => $self->clean( $self->FRST_NME ),
+            last_name    => $self->clean( $self->LST_NME ),
+            dob          => $self->dob,
+            role         => $self->CYF_ROLE,
+            sex          => $self->SEX,
+            address_one  => $addr_hash->{address_one},
+            address_two  => $addr_hash->{address_two},
+            city         => $addr_hash->{city},
+            state        => $addr_hash->{state},
+            zipcode      => $addr_hash->{zipcode},
+            email        => $contact_hash->{email},
+            home_phone   => $contact_hash->{home_phone},
+            work_phone   => $contact_hash->{work_phone},
+            mobile_phone => $contact_hash->{mobile_phone},
         };
     }
 }

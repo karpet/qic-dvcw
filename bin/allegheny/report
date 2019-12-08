@@ -29,6 +29,7 @@ for my $n ( 1 .. 9 ) {
 }
 
 for my $n ( 1 .. 9 ) {
+    push @$CSV_HEADER, "${n}_adult_role";
     push @$CSV_HEADER, "${n}_adult_id";
     push @$CSV_HEADER, "${n}_adult_first_name";
     push @$CSV_HEADER, "${n}_adult_last_name";
@@ -111,7 +112,7 @@ my $children = decode_json( read_text("$DATA/children.json") );
         }
 
         $i = 0;
-        for my $adult ( @{ $self->adults } ) {
+        for my $adult ( @{ $self->adults_sorted } ) {
             $i++;
             $row->{"${i}_adult_id"}         = $adult->id;
             $row->{"${i}_adult_first_name"} = $adult->first_name;
@@ -124,9 +125,22 @@ my $children = decode_json( read_text("$DATA/children.json") );
             $row->{"${i}_adult_zipcode"}    = $adult->zipcode;
             $row->{"${i}_adult_phone"}      = $adult->preferred_phone;
             $row->{"${i}_adult_email"}      = $adult->email;
+            $row->{"${i}_adult_role"}       = $adult->role;
         }
 
         return $row;
+    }
+
+    sub adults_sorted {
+        my $self    = shift;
+        my @mothers = grep { $_->role eq 'Mother' } @{ $self->adults };
+        my @fathers = grep { $_->role eq 'Father' } @{ $self->adults };
+
+        # id is not unique (alas) so we must de-dupe based on name and dob
+        my %seen;
+        my @sorted_uniq
+            = grep { !$seen{ $_->unique_id }++ } ( @mothers, @fathers );
+        return \@sorted_uniq;
     }
 }
 
@@ -156,9 +170,26 @@ my $children = decode_json( read_text("$DATA/children.json") );
             )
     ] => ( is => 'ro' );
 
+    sub unique_id {
+        my $self = shift;
+        return lc( sprintf "%s-%s-%s-%s",
+            $self->last_name, $self->first_name_only, $self->dob,
+            $self->role );
+    }
+
+    sub first_name_only {
+        my $self = shift;
+        my $n    = $self->first_name;
+        $n =~ s/\ \w\.?$//;
+        return $n;
+    }
+
     sub preferred_phone {
         my $self = shift;
-        return $self->mobile_phone || $self->home_phone || $self->work_phone;
+        return
+               $self->mobile_phone
+            || $self->home_phone
+            || $self->work_phone;
     }
 
     sub age {
@@ -214,12 +245,15 @@ my $children = decode_json( read_text("$DATA/children.json") );
 my $case_groups = {};
 for my $adult_id ( keys %$adults ) {
     my $adult = Adult->new( $adults->{$adult_id} );
-    push @{ $case_groups->{ $adult->case_id }->{adults} }, $adult;
+    $case_groups->{ $adult->case_id }->{adults}->{ $adult->id } = $adult;
 }
 for my $child_id ( keys %$children ) {
     my $child = Child->new( $children->{$child_id} );
-    push @{ $case_groups->{ $child->case_id }->{children} }, $child;
+    $case_groups->{ $child->case_id }->{children}->{ $child->id }
+        = $child;
 }
+
+#dump $case_groups;
 
 # group cases by worker
 my %worker_cases;
@@ -232,8 +266,8 @@ for my $case_id ( keys %$cases ) {
         warn sprintf( "Missing email for %s\n", $case->worker_name );
     }
 
-    $case->adults( $case_groups->{$case_id}->{adults}     || [] );
-    $case->children( $case_groups->{$case_id}->{children} || [] );
+    $case->adults(   [ values %{ $case_groups->{$case_id}->{adults} } ] );
+    $case->children( [ values %{ $case_groups->{$case_id}->{children} } ] );
 
     push @{ $worker_cases{$worker_id} }, $case;
 }
@@ -264,7 +298,8 @@ for my $worker_id ( sort keys %workers ) {
     for my $case ( @{ $worker->random_cases(2) } ) {
         next unless $case;    # if there were less than 2
 
-        $max_adults = $case->has_adults if $case->has_adults > $max_adults;
+        $max_adults = $case->has_adults
+            if $case->has_adults > $max_adults;
 
         my $num_pfc = scalar( @{ $case->potential_focal_children } );
         $max_children = $num_pfc if $num_pfc > $max_children;
