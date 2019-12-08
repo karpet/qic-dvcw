@@ -300,11 +300,11 @@ for my $worker_id ( sort keys %workers ) {
     for my $case ( @{ $worker->random_cases(2) } ) {
         next unless $case;    # if there were less than 2
 
-        $max_adults = $case->has_adults
-            if $case->has_adults > $max_adults;
+        my $num_adults = scalar( @{ $case->adults_sorted } );
+        my $num_pfc    = scalar( @{ $case->potential_focal_children } );
 
-        my $num_pfc = scalar( @{ $case->potential_focal_children } );
-        $max_children = $num_pfc if $num_pfc > $max_children;
+        $max_adults   = $num_adults if $num_adults > $max_adults;
+        $max_children = $num_pfc    if $num_pfc > $max_children;
 
         #printf "Random case for worker %s: %s\n", $worker_id, dump($case);
         $csv->print_hr( $fh, $case->as_csv_row );
