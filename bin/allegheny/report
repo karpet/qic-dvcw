@@ -22,25 +22,25 @@ my $CSV_HEADER = [
 
 # create 1..9 cells for children and adults
 for my $n ( 1 .. 9 ) {
-    push @$CSV_HEADER, "${n}_child_id";
-    push @$CSV_HEADER, "${n}_child_first_name";
-    push @$CSV_HEADER, "${n}_child_last_name";
-    push @$CSV_HEADER, "${n}_child_dob";
+    push @$CSV_HEADER, "child_${n}_id";
+    push @$CSV_HEADER, "child_${n}_first_name";
+    push @$CSV_HEADER, "child_${n}_last_name";
+    push @$CSV_HEADER, "child_${n}_dob";
 }
 
 for my $n ( 1 .. 9 ) {
-    push @$CSV_HEADER, "${n}_adult_role";
-    push @$CSV_HEADER, "${n}_adult_id";
-    push @$CSV_HEADER, "${n}_adult_first_name";
-    push @$CSV_HEADER, "${n}_adult_last_name";
-    push @$CSV_HEADER, "${n}_adult_dob";
-    push @$CSV_HEADER, "${n}_adult_street_one";
-    push @$CSV_HEADER, "${n}_adult_street_two";
-    push @$CSV_HEADER, "${n}_adult_city";
-    push @$CSV_HEADER, "${n}_adult_state";
-    push @$CSV_HEADER, "${n}_adult_zipcode";
-    push @$CSV_HEADER, "${n}_adult_phone";
-    push @$CSV_HEADER, "${n}_adult_email";
+    push @$CSV_HEADER, "adult_${n}_role";
+    push @$CSV_HEADER, "adult_${n}_id";
+    push @$CSV_HEADER, "adult_${n}_first_name";
+    push @$CSV_HEADER, "adult_${n}_last_name";
+    push @$CSV_HEADER, "adult_${n}_dob";
+    push @$CSV_HEADER, "adult_${n}_street_one";
+    push @$CSV_HEADER, "adult_${n}_street_two";
+    push @$CSV_HEADER, "adult_${n}_city";
+    push @$CSV_HEADER, "adult_${n}_state";
+    push @$CSV_HEADER, "adult_${n}_zipcode";
+    push @$CSV_HEADER, "adult_${n}_phone";
+    push @$CSV_HEADER, "adult_${n}_email";
 }
 
 my $usage       = "$0 datadir targetfile.csv";
@@ -105,27 +105,27 @@ my $children = decode_json( read_text("$DATA/children.json") );
         my $i   = 0;
         for my $child (@$pfc) {
             $i++;
-            $row->{"${i}_child_id"}         = $child->id;
-            $row->{"${i}_child_first_name"} = $child->first_name;
-            $row->{"${i}_child_last_name"}  = $child->last_name;
-            $row->{"${i}_child_dob"}        = $child->dob;
+            $row->{"child_${i}_id"}         = $child->id;
+            $row->{"child_${i}_first_name"} = $child->first_name;
+            $row->{"child_${i}_last_name"}  = $child->last_name;
+            $row->{"child_${i}_dob"}        = $child->dob;
         }
 
         $i = 0;
         for my $adult ( @{ $self->adults_sorted } ) {
             $i++;
-            $row->{"${i}_adult_id"}         = $adult->id;
-            $row->{"${i}_adult_first_name"} = $adult->first_name;
-            $row->{"${i}_adult_last_name"}  = $adult->last_name;
-            $row->{"${i}_adult_dob"}        = $adult->dob;
-            $row->{"${i}_adult_street_one"} = $adult->address_one;
-            $row->{"${i}_adult_street_two"} = $adult->address_two;
-            $row->{"${i}_adult_city"}       = $adult->city;
-            $row->{"${i}_adult_state"}      = $adult->state;
-            $row->{"${i}_adult_zipcode"}    = $adult->zipcode;
-            $row->{"${i}_adult_phone"}      = $adult->preferred_phone;
-            $row->{"${i}_adult_email"}      = $adult->email;
-            $row->{"${i}_adult_role"}       = $adult->role;
+            $row->{"adult_${i}_id"}         = $adult->id;
+            $row->{"adult_${i}_first_name"} = $adult->first_name;
+            $row->{"adult_${i}_last_name"}  = $adult->last_name;
+            $row->{"adult_${i}_dob"}        = $adult->dob;
+            $row->{"adult_${i}_street_one"} = $adult->address_one;
+            $row->{"adult_${i}_street_two"} = $adult->address_two;
+            $row->{"adult_${i}_city"}       = $adult->city;
+            $row->{"adult_${i}_state"}      = $adult->state;
+            $row->{"adult_${i}_zipcode"}    = $adult->zipcode;
+            $row->{"adult_${i}_phone"}      = $adult->preferred_phone;
+            $row->{"adult_${i}_email"}      = $adult->email;
+            $row->{"adult_${i}_role"}       = $adult->role;
         }
 
         return $row;
