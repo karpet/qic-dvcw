@@ -140,7 +140,9 @@ my $children = decode_json( read_text("$DATA/children.json") );
         my %seen;
         my @sorted_uniq
             = grep { !$seen{ $_->unique_id }++ } ( @mothers, @fathers );
-        return \@sorted_uniq;
+
+        # some names are "unknown" (case sensitive)
+        return [ grep { $_->unique_id !~ /unknown/ } @sorted_uniq ];
     }
 }
 
