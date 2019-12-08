@@ -89,19 +89,19 @@ my $children = decode_json( read_text("$DATA/children.json") );
     sub build_focal_child {
         my $self            = shift;
         my $pfc             = $self->potential_focal_children;
-        my @between_3_and_8 = grep { $_->age >= 3 && $_->age <= 8 } @$pfc;
-        my @nineyo          = grep { $_->age == 9 } @$pfc;
-        my @under3          = grep { $_->age < 3 } @$pfc;
+        my @between_5_and_9 = grep { $_->age >= 5 && $_->age <= 9 } @$pfc;
+        my @tenyo          = grep { $_->age == 10 } @$pfc;
+        my @under5          = grep { $_->age < 5 } @$pfc;
 
-        #warn dump( \@between_3_and_8 );
-        #warn dump( \@nineyo );
-        #warn dump( \@under3 );
+        #warn dump( \@between_5_and_9 );
+        #warn dump( \@tenyo );
+        #warn dump( \@under5 );
         #warn dump($pfc);
 
         return
-               shuffle(@between_3_and_8)
-            || shuffle(@nineyo)
-            || shuffle(@under3)
+               shuffle(@between_5_and_9)
+            || shuffle(@tenyo)
+            || shuffle(@under5)
             || shuffle(@$pfc);
     }
 

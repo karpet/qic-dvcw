@@ -60,9 +60,9 @@ List of potential focal children per case, criteria:
 
 * Age 10 and under as of 2020-01-01
 * in order of preference:
-  * between 3-8 years old
-  * 9yo
-  * under 3yo
+  * between 5-9 years old
+  * 10yo
+  * under 5yo
 
 The target has 1 case worker, all potential focal children, up to 9 "parent" adults.
 
