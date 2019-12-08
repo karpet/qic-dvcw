@@ -45,6 +45,8 @@
 
 The target file should contain randomized selection of cases, 2-3 cases per case worker per month per site.
 
+Different random cases every month (do not repeat any cases).
+
 List of potential focal children per case, criteria:
 
 * Age 10 and under as of 2020-01-01

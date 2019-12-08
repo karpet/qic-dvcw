@@ -7,6 +7,41 @@ use Text::CSV_XS;
 use Data::Dump qw( dump );
 use File::Slurper qw( read_text write_text read_binary );
 
+my $CSV_HEADER = [
+    qw(
+        case_id
+        site_name
+        site_office_name
+        survey_number
+        case_worker_id
+        case_worker_first_name
+        case_worker_last_name
+        case_worker_email
+        )
+];
+
+# create 1..9 cells for children and adults
+for my $n ( 1 .. 9 ) {
+    push @$CSV_HEADER, "${n}_child_id";
+    push @$CSV_HEADER, "${n}_child_first_name";
+    push @$CSV_HEADER, "${n}_child_last_name";
+    push @$CSV_HEADER, "${n}_child_dob";
+}
+
+for my $n ( 1 .. 9 ) {
+    push @$CSV_HEADER, "${n}_adult_id";
+    push @$CSV_HEADER, "${n}_adult_first_name";
+    push @$CSV_HEADER, "${n}_adult_last_name";
+    push @$CSV_HEADER, "${n}_adult_dob";
+    push @$CSV_HEADER, "${n}_adult_street_one";
+    push @$CSV_HEADER, "${n}_adult_street_two";
+    push @$CSV_HEADER, "${n}_adult_city";
+    push @$CSV_HEADER, "${n}_adult_state";
+    push @$CSV_HEADER, "${n}_adult_zipcode";
+    push @$CSV_HEADER, "${n}_adult_phone";
+    push @$CSV_HEADER, "${n}_adult_email";
+}
+
 my $usage       = "$0 datadir targetfile.csv";
 my $DATA        = shift(@ARGV) or die $usage;
 my $TARGET_FILE = shift(@ARGV) or die $usage;
@@ -33,14 +68,65 @@ my $children = decode_json( read_text("$DATA/children.json") );
             )
     ] => ( is => 'ro' );
 
-    has adults   => ( is => 'rw' );
-    has children => ( is => 'rw' );
+    has adults   => ( is => 'rw', default => sub { [] } );
+    has children => ( is => 'rw', default => sub { [] } );
+
+    sub has_adults   { scalar( @{ $_[0]->adults } ) }
+    sub has_children { scalar( @{ $_[0]->children } ) }
 
     sub worker_name {
         my $self = shift;
         return sprintf( "%s %s",
             $self->case_worker_first_name,
             $self->case_worker_last_name );
+    }
+
+    sub potential_focal_children {
+        my $self = shift;
+        return [ grep { $_->age < 11 } @{ $self->children } ];
+    }
+
+    sub as_csv_row {
+        my $self = shift;
+
+        my $row = {
+            case_id                => $self->case_id,
+            site_name              => $self->site_name,
+            site_office_name       => $self->site_office_name,
+            survey_number          => $self->survey_number,
+            case_worker_id         => $self->case_worker_id,
+            case_worker_first_name => $self->case_worker_first_name,
+            case_worker_last_name  => $self->case_worker_last_name,
+            case_worker_email      => $self->case_worker_email,
+        };
+
+        my $pfc = $self->potential_focal_children;
+        my $i   = 0;
+        for my $child (@$pfc) {
+            $i++;
+            $row->{"${i}_child_id"}         = $child->id;
+            $row->{"${i}_child_first_name"} = $child->first_name;
+            $row->{"${i}_child_last_name"}  = $child->last_name;
+            $row->{"${i}_child_dob"}        = $child->dob;
+        }
+
+        $i = 0;
+        for my $adult ( @{ $self->adults } ) {
+            $i++;
+            $row->{"${i}_adult_id"}         = $adult->id;
+            $row->{"${i}_adult_first_name"} = $adult->first_name;
+            $row->{"${i}_adult_last_name"}  = $adult->last_name;
+            $row->{"${i}_adult_dob"}        = $adult->dob;
+            $row->{"${i}_adult_street_one"} = $adult->address_one;
+            $row->{"${i}_adult_street_two"} = $adult->address_two;
+            $row->{"${i}_adult_city"}       = $adult->city;
+            $row->{"${i}_adult_state"}      = $adult->state;
+            $row->{"${i}_adult_zipcode"}    = $adult->zipcode;
+            $row->{"${i}_adult_phone"}      = $adult->preferred_phone;
+            $row->{"${i}_adult_email"}      = $adult->email;
+        }
+
+        return $row;
     }
 }
 
@@ -51,6 +137,7 @@ my $children = decode_json( read_text("$DATA/children.json") );
 
     has [
         qw(
+            id
             last_name
             work_phone
             address_two
@@ -61,7 +148,6 @@ my $children = decode_json( read_text("$DATA/children.json") );
             first_name
             home_phone
             dob
-            kids_client_id
             city
             sex
             mobile_phone
@@ -70,6 +156,17 @@ my $children = decode_json( read_text("$DATA/children.json") );
             )
     ] => ( is => 'ro' );
 
+    sub preferred_phone {
+        my $self = shift;
+        return $self->mobile_phone || $self->home_phone || $self->work_phone;
+    }
+
+    sub age {
+        my $self = shift;
+        return 0 unless $self->dob;
+        my ($year) = ( $self->dob =~ m/^(\d+)-/ );
+        return 2020 - $year;
+    }
 }
 
 {
@@ -93,9 +190,24 @@ my $children = decode_json( read_text("$DATA/children.json") );
 
     package CaseWorker;
     use Moo;
+    use List::Util qw(shuffle);
 
     has id    => ( is => 'ro' );
     has cases => ( is => 'rw' );
+
+    sub has_cases {
+        my $self = shift;
+        return scalar( @{ $self->cases } );
+    }
+
+    sub random_cases {
+        my $self = shift;
+        my $count = shift || 2;
+
+        # TODO filter out already-targeted cases.
+        my @shuffled = shuffle( @{ $self->cases } );
+        return [ @shuffled[ 0 .. ( $count - 1 ) ] ];
+    }
 }
 
 # unwind adults and children to group by case
@@ -117,11 +229,11 @@ for my $case_id ( keys %$cases ) {
     my $worker_id = $case->case_worker_id;
 
     if ( $case->case_worker_email =~ /example.com/ ) {
-        warn sprintf("Missing email for %s\n", $case->worker_name);
+        warn sprintf( "Missing email for %s\n", $case->worker_name );
     }
 
-    $case->adults( $case_groups->{$case_id}->{adults} );
-    $case->children( $case_groups->{$case_id}->{children} );
+    $case->adults( $case_groups->{$case_id}->{adults}     || [] );
+    $case->children( $case_groups->{$case_id}->{children} || [] );
 
     push @{ $worker_cases{$worker_id} }, $case;
 }
@@ -136,3 +248,34 @@ for my $worker_id ( keys %worker_cases ) {
 
 printf "Found %s case workers for %s cases\n", scalar( keys %workers ),
     scalar( keys %$cases );
+
+# create the report
+my $csv = Text::CSV_XS->new( { binary => 1, eol => $/, auto_diag => 1, } );
+$csv->column_names($CSV_HEADER);
+open my $fh, ">:encoding(utf8)", $TARGET_FILE or die "$TARGET_FILE: $!";
+$csv->print( $fh, $CSV_HEADER );
+
+my $num_rows     = 0;
+my $max_children = 0;
+my $max_adults   = 0;
+for my $worker_id ( sort keys %workers ) {
+    my $worker = $workers{$worker_id};
+    next unless $worker->has_cases;
+    for my $case ( @{ $worker->random_cases(2) } ) {
+        next unless $case;    # if there were less than 2
+
+        $max_adults = $case->has_adults if $case->has_adults > $max_adults;
+
+        my $num_pfc = scalar( @{ $case->potential_focal_children } );
+        $max_children = $num_pfc if $num_pfc > $max_children;
+
+        #printf "Random case for worker %s: %s\n", $worker_id, dump($case);
+        $csv->print_hr( $fh, $case->as_csv_row );
+        $num_rows++;
+    }
+}
+close $fh or die "$TARGET_FILE: $!";
+printf "Wrote %s rows to %s\n", $num_rows, $TARGET_FILE;
+printf "Max potential focal children seen on a single case: %s\n",
+    $max_children;
+printf "Max adults seen on a single case: %s\n", $max_adults;

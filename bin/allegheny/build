@@ -168,7 +168,7 @@ my ( %cases, %adults, %childs );
 
         return {
             case_id        => $self->ENTITY_ID,
-            kids_client_id => $self->CL_ID,
+            id             => $self->CL_ID,
             first_name     => $self->FRST_NME,
             last_name      => $self->LST_NME,
             dob            => $self->dob,
