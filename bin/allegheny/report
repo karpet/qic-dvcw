@@ -19,7 +19,7 @@ my $CSV_HEADER = [
         case_worker_email
         focal_child_id
         focal_child_first_name
-        focal_child_last_field
+        focal_child_last_name
         focal_child_dob
         )
 ];
@@ -181,8 +181,11 @@ my $children = decode_json( read_text("$DATA/children.json") );
 
     sub eligible {
         my $self = shift;
-        return 1 if $self->focal_child;    # TODO already sampled
-        return 0;
+        return 0 unless $self->focal_child;
+        return 0 unless scalar( @{ $self->adults_sorted } ) > 0;
+
+        # TODO skip already surveyed.
+        return 1;
     }
 }
 
@@ -273,12 +276,16 @@ my $children = decode_json( read_text("$DATA/children.json") );
         return scalar( @{ $self->cases } );
     }
 
+    sub eligible_cases {
+        my $self = shift;
+        return [ grep { $_->eligible } @{ $self->cases } ];
+    }
+
     sub random_cases {
         my $self = shift;
         my $count = shift || 2;
 
-        # TODO filter out already-targeted cases.
-        my @shuffled = shuffle( grep { $_->eligible } @{ $self->cases } );
+        my @shuffled = shuffle( @{ $self->eligible_cases } );
         return [ @shuffled[ 0 .. ( $count - 1 ) ] ];
     }
 }
