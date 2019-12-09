@@ -17,6 +17,7 @@ create unique index case_workers_email_index on case_workers(email);
 create table cases (
   id varchar(16) primary key,
   case_worker_id varchar(16) not null references case_workers(id),
+  survey_name varchar(16),
   surveyed_at datetime,
   created_at datetime,
   updated_at datetime
@@ -35,7 +36,7 @@ create table children (
 );
 create index children_case_id_index on children(case_id);
 
-create table parents (
+create table adults (
   id varchar(16) primary key,
   case_id varchar(16) not null references cases(id),
   first_name varchar(255),
@@ -55,6 +56,6 @@ create table parents (
   created_at datetime,
   updated_at datetime
 );
-create index parents_case_id_index on parents(case_id);
+create index adults_case_id_index on adults(case_id);
 
 COMMIT;
