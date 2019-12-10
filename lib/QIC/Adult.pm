@@ -6,7 +6,8 @@ __PACKAGE__->meta->setup(
     table => 'adults',
 
     columns => [
-        id           => { type => 'varchar', length => 16 },
+        id           => { type => 'varchar', length => 32 },
+        client_id    => { type => 'varchar', length => 16 },
         case_id      => { type => 'varchar', length => 16 },
         first_name   => { type => 'varchar', length => 255 },
         last_name    => { type => 'varchar', length => 255 },
@@ -16,7 +17,7 @@ __PACKAGE__->meta->setup(
         city         => { type => 'varchar', length => 255 },
         state        => { type => 'varchar', length => 255 },
         zipcode      => { type => 'varchar', length => 255 },
-        sex          => { type => 'varchar', length => 8 },
+        sex          => { type => 'varchar', length => 32 },
         role         => { type => 'varchar', length => 32 },
         home_phone   => { type => 'varchar', length => 32 },
         work_phone   => { type => 'varchar', length => 32 },

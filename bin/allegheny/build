@@ -7,6 +7,13 @@ use Text::CSV_XS;
 use Data::Dump qw( dump );
 use File::Slurper qw( read_text write_text read_binary );
 
+use FindBin;
+use lib "$FindBin::Bin/../../lib";
+use QIC::Case;
+use QIC::CaseWorker;
+use QIC::Adult;
+use QIC::Child;
+
 my $usage = "$0 datadir";
 die $usage unless @ARGV;
 my $DATA = shift(@ARGV);
@@ -24,8 +31,6 @@ my $history     = decode_json( read_text($history_file) );
 my $clients     = decode_json( read_binary($client_file) );
 my $emails      = decode_json( read_text($email_file) );
 my $caseworkers = decode_json( read_text($caseworker_file) );
-
-my $SAFELIST_DOMAIN = "alleghenycounty.us";
 
 # build out cases, adults, children
 # clients are adults or children
@@ -156,11 +161,13 @@ my ( %cases, %adults, %childs );
 
     sub dob {
         my $self = shift;
-        return "" unless $self->BRTH_DT;
+        return undef unless $self->BRTH_DT;
 
         my ( $month, $day, $year2 )
             = ( $self->BRTH_DT =~ m,^(\d+)/(\d+)/(\d+) , );   # "7/21/75 0:00"
         my $year = $year2 > 20 ? "19$year2" : "20$year2";
+        $day   = "0$day"   if length($day) == 1;
+        $month = "0$month" if length($month) == 1;
         return "$year-$month-$day";
     }
 
@@ -178,8 +185,9 @@ my ( %cases, %adults, %childs );
         my $contact_hash = $self->contact->transform;
 
         return {
+            id           => $self->join_id,
             case_id      => $self->ENTITY_ID,
-            id           => $self->CL_ID,
+            client_id    => $self->CL_ID,
             first_name   => $self->clean( $self->FRST_NME ),
             last_name    => $self->clean( $self->LST_NME ),
             dob          => $self->dob,
@@ -309,7 +317,9 @@ my ( %cases, %adults, %childs );
 
     sub id {
         my $self = shift;
-        return sprintf( "%s-%s", lc( $self->first_name ), lc( $self->last_name ) );
+        return sprintf( "%s-%s",
+            lc( $self->first_name ),
+            lc( $self->last_name ) );
     }
 
 }
@@ -340,6 +350,8 @@ for my $email_hash (@$caseworkers) {
 my $adult_count = 0;
 my $child_count = 0;
 
+my %clients_by_join_id = ();
+
 print "Found " . scalar(@$clients) . " clients\n";
 for my $client_hash (@$clients) {
     my $client = Client->new($client_hash);
@@ -350,11 +362,13 @@ for my $client_hash (@$clients) {
         $adult_count++;
         $client->address( $addr_lookup{ $client->join_id } );
         $client->contact( $contact_lookup{ $client->join_id } );
-        $adults{ $client->id } = $client->transform;
+        $adults{ $client->join_id } = $client->transform;
+        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
     }
     elsif ( $client->CHILD_SW and $client->CHILD_SW eq 'Y' ) {
         $child_count++;
-        $childs{ $client->id } = $client->transform;
+        $childs{ $client->join_id } = $client->transform;
+        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
     }
 }
 
@@ -386,12 +400,42 @@ write_text( "$DATA/adults.json",   encode_json( \%adults ) );
 write_text( "$DATA/children.json", encode_json( \%childs ) );
 write_text( "$DATA/cases.json",    encode_json( \%cases ) );
 
-printf "Processed %s adult parents, wrote %s adults\n", $adult_count,
+printf "Processed %s adult parents, wrote %s unique adults\n", $adult_count,
     scalar( keys %adults );
 
-printf "Processed %s children, wrote %s children\n", $child_count,
+printf "Processed %s children, wrote %s unique children\n", $child_count,
     scalar( keys %childs );
 
 printf "Processed %s cases, wrote %s cases\n", $case_count,
     scalar( keys %cases );
 
+# write to db
+for my $case_id ( keys %cases ) {
+    my $case_rec    = $cases{$case_id};
+    my $case_worker = QIC::CaseWorker->new(
+        id               => $case_rec->{case_worker_id},
+        first_name       => $case_rec->{case_worker_first_name},
+        last_name        => $case_rec->{case_worker_last_name},
+        email            => $case_rec->{case_worker_email},
+        site_name        => "allegheny",
+        site_office_name => $case_rec->{site_office_name}
+    )->load_or_save;
+    my $case
+        = QIC::Case->new( id => $case_id, case_worker_id => $case_worker->id )
+        ->load_or_save;
+}
+for my $adult_id ( keys %adults ) {
+    my $rec   = $adults{$adult_id};
+    my $adult = QIC::Adult->new(%$rec)->load_or_save;
+}
+for my $child_id ( keys %childs ) {
+    my $rec   = $childs{$child_id};
+    my $child = QIC::Child->new(
+        case_id    => $rec->{case_id},
+        first_name => $rec->{first_name},
+        last_name  => $rec->{last_name},
+        dob        => $rec->{dob}
+    )->load_or_save;
+}
+
+#dump \%clients_by_join_id;

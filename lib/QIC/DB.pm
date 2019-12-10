@@ -9,14 +9,15 @@ use Path::Class::File;
 
 my $base_path;
 
-for my $path ( "$FindBin::Bin/..", "$FindBin::Bin" ) {
+for my $path ( "./", "$FindBin::Bin/..", "$FindBin::Bin/../..", "$FindBin::Bin" ) {
     if ( -s Path::Class::File->new( $path, "qic.sql" ) ) {
         $base_path = $path;
     }
 }
 
 if ( !$base_path ) {
-    croak "can't locate base path containing qic.sql using FindBin $FindBin::Bin";
+    croak
+        "can't locate base path containing qic.sql using FindBin $FindBin::Bin";
 }
 
 my $sql = Path::Class::File->new( $base_path, 'qic.sql' );

@@ -6,7 +6,7 @@ report - Create QIC target files from site data
 
 =head1 USAGE
 
- report --sitename :site: --datadir :data/path:
+ report --sitename :site: --datadir :data/path: --surveyname :surveyname:
 
 =cut
 
@@ -27,11 +27,16 @@ use QIC::Case;
 my $config = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
 
 #dump $config;
-GetOptions( $config, 'help', 'sitename=s', 'datadir=s' ) or pod2usage(2);
+GetOptions( $config, 'help', 'sitename=s', 'datadir=s', 'surveyname=s' )
+    or pod2usage(2);
 
 #dump $config;
 
-if ( $config->{help} || !$config->{sitename} || !$config->{datadir} ) {
+if (   $config->{help}
+    || !$config->{sitename}
+    || !$config->{datadir}
+    || !$config->{surveyname} )
+{
     pod2usage(2);
 }
 
@@ -42,6 +47,8 @@ if ( !$config->{ $config->{sitename} } ) {
 my $DATA        = $config->{datadir};
 my $ymd         = DateTime->now->ymd;
 my $TARGET_FILE = join( "-", $ymd, $config->{sitename}, "target.csv" );
+
+my $DOB_DELIM = "\003";    # coerce Excel into not autoformatting dates in CSV
 
 my $CSV_HEADER = [
     qw(
@@ -161,29 +168,29 @@ my $children = decode_json( read_text("$DATA/children.json") );
             case_worker_first_name => $self->case_worker_first_name,
             case_worker_last_name  => $self->case_worker_last_name,
             case_worker_email      => $self->case_worker_email,
-            focal_child_id         => $self->focal_child->id,
+            focal_child_id         => $self->focal_child->client_id,
             focal_child_first_name => $self->focal_child->first_name,
             focal_child_last_name  => $self->focal_child->last_name,
-            focal_child_dob        => $self->focal_child->dob,
+            focal_child_dob        => $self->focal_child->dob_safe,
         };
 
         my $pfc = $self->potential_focal_children;
         my $i   = 0;
         for my $child (@$pfc) {
             $i++;
-            $row->{"child_${i}_id"}         = $child->id;
+            $row->{"child_${i}_id"}         = $child->client_id;
             $row->{"child_${i}_first_name"} = $child->first_name;
             $row->{"child_${i}_last_name"}  = $child->last_name;
-            $row->{"child_${i}_dob"}        = $child->dob;
+            $row->{"child_${i}_dob"}        = $child->dob_safe;
         }
 
         $i = 0;
         for my $adult ( @{ $self->adults_sorted } ) {
             $i++;
-            $row->{"adult_${i}_id"}         = $adult->id;
+            $row->{"adult_${i}_id"}         = $adult->client_id;
             $row->{"adult_${i}_first_name"} = $adult->first_name;
             $row->{"adult_${i}_last_name"}  = $adult->last_name;
-            $row->{"adult_${i}_dob"}        = $adult->dob;
+            $row->{"adult_${i}_dob"}        = $adult->dob_safe;
             $row->{"adult_${i}_street_one"} = $adult->address_one;
             $row->{"adult_${i}_street_two"} = $adult->address_two;
             $row->{"adult_${i}_city"}       = $adult->city;
@@ -233,6 +240,7 @@ my $children = decode_json( read_text("$DATA/children.json") );
             work_phone
             address_two
             case_id
+            client_id
             role
             email
             state
@@ -247,11 +255,20 @@ my $children = decode_json( read_text("$DATA/children.json") );
             )
     ] => ( is => 'ro' );
 
+    sub dob_safe {
+        my $self = shift;
+        return ( $self->dob || "" ) . $DOB_DELIM;
+    }
+
     sub unique_id {
         my $self = shift;
-        return lc( sprintf "%s-%s-%s-%s",
-            $self->last_name, $self->first_name_only, $self->dob,
-            $self->role );
+        ( my $first = $self->first_name_only ) =~ s/\W//g;
+        ( my $last  = $self->last_name ) =~ s/\W//g;
+        return lc(
+            sprintf "%s%s-%s-%s",
+            $last, $first, ( $self->dob || '' ),
+            $self->role
+        );
     }
 
     sub first_name_only {
@@ -326,11 +343,12 @@ my $children = decode_json( read_text("$DATA/children.json") );
 my $case_groups = {};
 for my $adult_id ( keys %$adults ) {
     my $adult = Adult->new( $adults->{$adult_id} );
-    $case_groups->{ $adult->case_id }->{adults}->{ $adult->id } = $adult;
+    $case_groups->{ $adult->case_id }->{adults}->{ $adult->client_id }
+        = $adult;
 }
 for my $child_id ( keys %$children ) {
     my $child = Child->new( $children->{$child_id} );
-    $case_groups->{ $child->case_id }->{children}->{ $child->id }
+    $case_groups->{ $child->case_id }->{children}->{ $child->client_id }
         = $child;
 }
 

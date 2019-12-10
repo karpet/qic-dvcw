@@ -26,7 +26,8 @@ create index cases_case_worker_id_index on cases(case_worker_id);
 create index cases_surveyed_at_index on cases(surveyed_at);
 
 create table children (
-  id varchar(16) primary key,
+  id varchar(32) primary key,
+  client_id varchar(16),
   case_id varchar(16) not null references cases(id),
   first_name varchar(255),
   last_name varchar(255),
@@ -35,9 +36,11 @@ create table children (
   updated_at datetime
 );
 create index children_case_id_index on children(case_id);
+create unique index children_client_id_case_id_index on children(client_id, case_id);
 
 create table adults (
-  id varchar(16) primary key,
+  id varchar(32) primary key,
+  client_id varchar(16),
   case_id varchar(16) not null references cases(id),
   first_name varchar(255),
   last_name varchar(255),
@@ -48,7 +51,7 @@ create table adults (
   state varchar(255),
   zipcode varchar(255),
   email varchar(255),
-  sex varchar(8),
+  sex varchar(32),
   role varchar(32),
   home_phone varchar(32),
   work_phone varchar(32),
@@ -57,5 +60,6 @@ create table adults (
   updated_at datetime
 );
 create index adults_case_id_index on adults(case_id);
+create unique index adults_client_id_case_id_index on adults(client_id, case_id);
 
 COMMIT;

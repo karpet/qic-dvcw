@@ -6,7 +6,8 @@ __PACKAGE__->meta->setup(
     table => 'children',
 
     columns => [
-        id           => { type => 'varchar', length => 16 },
+        id           => { type => 'varchar', length => 32 },
+        client_id    => { type => 'varchar', length => 16 },
         case_id      => { type => 'varchar', length => 16 },
         first_name   => { type => 'varchar', length => 255 },
         last_name    => { type => 'varchar', length => 255 },
