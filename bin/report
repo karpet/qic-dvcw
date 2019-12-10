@@ -45,8 +45,10 @@ if ( !$config->{ $config->{sitename} } ) {
 }
 
 my $DATA        = $config->{datadir};
-my $ymd         = DateTime->now->ymd;
-my $TARGET_FILE = join( "-", $ymd, $config->{sitename}, "target.csv" );
+my $now         = DateTime->now->set_time_zone('America/Chicago');
+my $ymd         = $now->ymd('');
+my $hms         = $now->hms('');
+my $TARGET_FILE = join( "-", $ymd, $hms, $config->{sitename}, "target.csv" );
 
 my $DOB_DELIM = "\003";    # coerce Excel into not autoformatting dates in CSV
 
@@ -153,7 +155,7 @@ my $children = decode_json( read_text("$DATA/children.json") );
 
     sub potential_focal_children {
         my $self = shift;
-        return [ grep { $_->age < 11 } @{ $self->children } ];
+        return [ grep { $_->age < 11 } @{ $self->children_sorted } ];
     }
 
     sub as_csv_row {
@@ -218,6 +220,14 @@ my $children = decode_json( read_text("$DATA/children.json") );
         return [ grep { $_->unique_id !~ /unknown/ } @sorted_uniq ];
     }
 
+    sub children_sorted {
+        my $self = shift;
+        my %seen;
+        my @sorted_uniq
+            = grep { !$seen{ $_->unique_id }++ } @{ $self->children };
+        return [ grep { $_->unique_id !~ /unknown/ } @sorted_uniq ];
+    }
+
     sub eligible {
         my $self = shift;
         return 0 unless $self->focal_child;
@@ -264,11 +274,14 @@ my $children = decode_json( read_text("$DATA/children.json") );
         my $self = shift;
         ( my $first = $self->first_name_only ) =~ s/\W//g;
         ( my $last  = $self->last_name ) =~ s/\W//g;
-        return lc(
-            sprintf "%s%s-%s-%s",
-            $last, $first, ( $self->dob || '' ),
-            $self->role
-        );
+        my $first_initial  = ( split( '',  $first ) )[0];
+        my $second_initial = ( split( '',  $first ) )[1];
+        my $last_initial   = ( split( '',  $last ) )[0];
+        my $year           = ( split( '-', $self->dob || '' ) )[0] || '';
+        return
+            lc(
+            join( '-', $first_initial, $second_initial, $year, $self->role )
+            );
     }
 
     sub first_name_only {
@@ -403,6 +416,8 @@ for my $worker_id ( sort keys %workers ) {
 
         $max_adults   = $num_adults if $num_adults > $max_adults;
         $max_children = $num_pfc    if $num_pfc > $max_children;
+
+        #     dump($case) if $case->case_id eq '58434';
 
    #        printf "Random case for worker %s: %s\n", $worker_id, dump($case);
    #        printf "Focal child: %s\n", dump( $case->focal_child );

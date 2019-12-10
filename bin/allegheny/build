@@ -431,6 +431,8 @@ for my $adult_id ( keys %adults ) {
 for my $child_id ( keys %childs ) {
     my $rec   = $childs{$child_id};
     my $child = QIC::Child->new(
+        id         => $rec->{id},
+        client_id  => $rec->{client_id},
         case_id    => $rec->{case_id},
         first_name => $rec->{first_name},
         last_name  => $rec->{last_name},
