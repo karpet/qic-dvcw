@@ -1,11 +1,47 @@
 #!/usr/bin/env perl
 
+=head1 NAME
+
+report - Create QIC target files from site data
+
+=head1 USAGE
+
+ report --sitename :site: --datadir :data/path:
+
+=cut
+
 use strict;
 use warnings;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use Getopt::Long;
+use Pod::Usage;
 use JSON;
 use Text::CSV_XS;
 use Data::Dump qw( dump );
 use File::Slurper qw( read_text write_text read_binary );
+use Config::YAML;
+
+use QIC::Case;
+
+my $config = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
+
+#dump $config;
+GetOptions( $config, 'help', 'sitename=s', 'datadir=s' ) or pod2usage(2);
+
+#dump $config;
+
+if ( $config->{help} || !$config->{sitename} || !$config->{datadir} ) {
+    pod2usage(2);
+}
+
+if ( !$config->{ $config->{sitename} } ) {
+    die "Invalid sitename (check config.yml): $config->{sitename}";
+}
+
+my $DATA        = $config->{datadir};
+my $ymd         = DateTime->now->ymd;
+my $TARGET_FILE = join( "-", $ymd, $config->{sitename}, "target.csv" );
 
 my $CSV_HEADER = [
     qw(
@@ -46,10 +82,6 @@ for my $n ( 1 .. 9 ) {
     push @$CSV_HEADER, "adult_${n}_phone";
     push @$CSV_HEADER, "adult_${n}_email";
 }
-
-my $usage       = "$0 datadir targetfile.csv";
-my $DATA        = shift(@ARGV) or die $usage;
-my $TARGET_FILE = shift(@ARGV) or die $usage;
 
 my $cases    = decode_json( read_text("$DATA/cases.json") );
 my $adults   = decode_json( read_text("$DATA/adults.json") );
