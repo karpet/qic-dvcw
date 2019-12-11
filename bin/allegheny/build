@@ -301,9 +301,9 @@ my ( %cases, %adults, %childs );
             case_worker_first_name => $self->first_name,
             case_worker_last_name  => $self->last_name,
             case_worker_email      => $self->email,
-            site_name              => 'AC',
-            site_office_name       => $self->UNIT_NAME,    # TODO
-            survey_number          => 1,                   # TODO
+            site_name              => 'allegheny',
+            site_office_name       => $self->UNIT_NAME,
+            survey_number          => 1,
         };
     }
 }

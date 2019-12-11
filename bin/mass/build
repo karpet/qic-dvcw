@@ -1,0 +1,193 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use JSON;
+use Text::CSV_XS;
+use Data::Dump qw( dump );
+use File::Slurper qw( read_text write_text read_binary );
+
+use FindBin;
+use lib "$FindBin::Bin/../../lib";
+use QIC::Case;
+use QIC::CaseWorker;
+use QIC::Adult;
+use QIC::Child;
+
+my $usage = "$0 datadir";
+die $usage unless @ARGV;
+my $DATA = shift(@ARGV);
+
+#my $contact_file    = "$DATA/contacts.json";
+#my $address_file    = "$DATA/address.json";
+my $caseworker_file = "$DATA/case-workers.json";
+my $client_file     = "$DATA/clients.json";
+my $cases_file      = "$DATA/cases.json";
+
+#my $contacts    = decode_json( read_text($contact_file) );
+#my $addresses   = decode_json( read_text($address_file) );
+#my $history     = decode_json( read_text($history_file) );
+my $clients     = decode_json( read_binary($client_file) );
+my $cases       = decode_json( read_binary($cases_file) );
+my $caseworkers = decode_json( read_text($caseworker_file) );
+
+# build out cases, adults, children
+# clients are adults or children
+
+my ( %cases, %adults, %childs );
+
+{
+
+    package Client;
+    use Moo;
+
+    has [
+        qw(
+            sex
+            dob
+            case_id
+            last_name
+            middle_name
+            first_name
+            id
+            is_child
+            )
+    ] => ( is => 'ro' );
+
+}
+
+{
+
+    package Case;
+    use Moo;
+
+    has [qw( id case_worker_id )] => ( is => 'ro' );
+}
+
+sub clean_name {
+    my $n = shift;
+    $n =~ s/^\s+|\s+$//g;
+    return $n;
+}
+
+sub parse_date_ymd {
+    my $date = shift or return;
+
+    my ( $year2, $month, $day )
+        = ( $date =~ m,^(\d+)/(\d+)/(\d+), );    # "72/3/29"
+    my $year = $year2 > 20 ? "19$year2" : "20$year2";
+    $day   = "0$day"   if length($day) == 1;
+    $month = "0$month" if length($month) == 1;
+    return "$year-$month-$day";
+}
+
+sub consumer_to_client {
+    my $consumer = shift;
+    return Client->new({
+        sex         => $consumer->{"Birth Sex"},
+        dob         => parse_date_ymd( $consumer->{"Birthdate"} ),
+        case_id     => $consumer->{"QIC Unique Case ID"},
+        last_name   => $consumer->{"Last Name"},
+        middle_name => $consumer->{"Middle Name"},
+        first_name  => $consumer->{"First Name"},
+        id          => $consumer->{"QIC Unique Person ID"},
+        is_child    => $consumer->{"Role Type"} eq "Consumer Child",
+    });
+}
+
+sub case_to_case {
+    my $case = shift;
+    return Case->new(
+        {   id             => $case->{"QIC Case ID"},
+            case_worker_id => $case->{"QIC Employee ID"},
+        }
+    );
+}
+
+# build adults and children
+my $adult_count = 0;
+my $child_count = 0;
+
+my %clients_by_join_id = ();
+
+print "Found " . scalar(@$clients) . " clients\n";
+for my $client_hash (@$clients) {
+    my $client = consumer_to_client($client_hash);
+
+    next unless $client->id;
+
+    if ( !$client->is_child ) {
+        $adult_count++;
+        $client->address( $addr_lookup{ $client->join_id } );
+        $client->contact( $contact_lookup{ $client->join_id } );
+        $adults{ $client->join_id } = $client->transform;
+        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
+    }
+    elsif ( $client->is_child ) {
+        $child_count++;
+        $childs{ $client->join_id } = $client->transform;
+        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
+    }
+}
+
+# build cases
+print "Found " . scalar(@$cases) . " cases\n";
+my $case_count = 0;
+for my $case_hash (@$cases) {
+    my $case = case_to_case($case_hash);
+
+    # skip nonsense
+    next unless $case->id;
+
+    # count processed (we will skip some that don't have emails)
+    $case_count++;
+
+    $cases{ $case->id } = $case->transform;
+}
+
+# write out denormalized
+write_text( "$DATA/adults.json",   encode_json( \%adults ) );
+write_text( "$DATA/children.json", encode_json( \%childs ) );
+write_text( "$DATA/cases.json",    encode_json( \%cases ) );
+
+printf "Processed %s adult parents, wrote %s unique adults\n", $adult_count,
+    scalar( keys %adults );
+
+printf "Processed %s children, wrote %s unique children\n", $child_count,
+    scalar( keys %childs );
+
+printf "Processed %s cases, wrote %s cases\n", $case_count,
+    scalar( keys %cases );
+
+# write to db
+for my $case_id ( keys %cases ) {
+    my $case_rec    = $cases{$case_id};
+    my $case_worker = QIC::CaseWorker->new(
+        id               => $case_rec->{case_worker_id},
+        first_name       => $case_rec->{case_worker_first_name},
+        last_name        => $case_rec->{case_worker_last_name},
+        email            => $case_rec->{case_worker_email},
+        site_name        => "mass",
+        site_office_name => $case_rec->{site_office_name}
+    )->load_or_save;
+    my $case
+        = QIC::Case->new( id => $case_id, case_worker_id => $case_worker->id )
+        ->load_or_save;
+}
+for my $adult_id ( keys %adults ) {
+    my $rec   = $adults{$adult_id};
+    my $adult = QIC::Adult->new(%$rec)->load_or_save;
+}
+for my $child_id ( keys %childs ) {
+    my $rec   = $childs{$child_id};
+    my $child = QIC::Child->new(
+        id         => $rec->{id},
+        client_id  => $rec->{client_id},
+        case_id    => $rec->{case_id},
+        first_name => $rec->{first_name},
+        last_name  => $rec->{last_name},
+        dob        => $rec->{dob}
+    )->load_or_save;
+}
+
+#dump \%clients_by_join_id;
