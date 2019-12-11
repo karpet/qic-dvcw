@@ -296,5 +296,4 @@ e.g. if there are 3 mothers and 10 fathers, we want the 9 adults to include all 
 
 ## TODO
 
-* Split build scripts into separate lib class files.
 

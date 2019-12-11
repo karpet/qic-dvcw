@@ -29,7 +29,7 @@ my $CONFIG = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
 GetOptions( $CONFIG, 'help', 'sitename=s', 'surveyname=s' )
     or pod2usage(2);
 
-dump $CONFIG;
+#dump $CONFIG;
 
 if (   $CONFIG->{help}
     || !$CONFIG->{sitename}
@@ -125,8 +125,13 @@ for my $worker (@$workers) {
 #        printf "Random case for worker %s: %s\n", $worker_id, dump($case->as_tree);
 #        printf "Focal child: %s\n", dump( $case->focal_child->as_tree );
 
+        $case->surveyed_at($now);
+        $case->survey_name( $CONFIG->{surveyname} );
+
         $csv->print_hr( $fh, $case->as_csv_row );
         $num_rows++;
+
+        $case->save();
     }
 }
 close $fh or die "$TARGET_FILE: $!";

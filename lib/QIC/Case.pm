@@ -145,8 +145,7 @@ sub eligible {
     my $self = shift;
     return 0 unless $self->focal_child;
     return 0 unless scalar( @{ $self->adults_sorted } ) > 0;
-
-    # TODO skip already surveyed.
+    return 0 if $self->surveyed_at;
     return 1;
 }
 
