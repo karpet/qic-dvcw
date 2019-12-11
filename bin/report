@@ -6,7 +6,7 @@ report - Create QIC target files from site data
 
 =head1 USAGE
 
- report --sitename :site: --datadir :data/path: --surveyname :surveyname:
+ report --sitename :site: --surveyname :surveyname:
 
 =cut
 
@@ -26,14 +26,13 @@ use QIC::Case;
 
 my $CONFIG = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
 
-GetOptions( $CONFIG, 'help', 'sitename=s', 'datadir=s', 'surveyname=s' )
+GetOptions( $CONFIG, 'help', 'sitename=s', 'surveyname=s' )
     or pod2usage(2);
 
 dump $CONFIG;
 
 if (   $CONFIG->{help}
     || !$CONFIG->{sitename}
-    || !$CONFIG->{datadir}
     || !$CONFIG->{surveyname} )
 {
     pod2usage(2);
@@ -44,13 +43,10 @@ if ( !$CONFIG->{ $CONFIG->{sitename} } ) {
 }
 
 my $SITE_CONFIG = $CONFIG->{ $CONFIG->{sitename} };
-my $DATA        = $CONFIG->{datadir};
 my $now         = DateTime->now->set_time_zone('America/Chicago');
 my $ymd         = $now->ymd('');
 my $hms         = $now->hms('');
 my $TARGET_FILE = join( "-", $ymd, $hms, $CONFIG->{sitename}, "target.csv" );
-
-my $DOB_DELIM = "\003";    # coerce Excel into not autoformatting dates in CSV
 
 my $CSV_HEADER = [
     qw(
@@ -92,308 +88,13 @@ for my $n ( 1 .. 9 ) {
     push @$CSV_HEADER, "adult_${n}_email";
 }
 
-my $cases    = decode_json( read_text("$DATA/cases.json") );
-my $adults   = decode_json( read_text("$DATA/adults.json") );
-my $children = decode_json( read_text("$DATA/children.json") );
+my $workers = QIC::CaseWorker->fetch_all(
+    require_objects => ['cases'],
+    query           => [ 'cases.surveyed_at' => undef ],
+    sort_by         => 'id'
+);
 
-{
-
-    package Case;
-    use Moo;
-    use List::Util qw(shuffle);
-    use Data::Dump qw( dump );
-
-    has [
-        qw(
-            case_worker_email
-            site_office_name
-            case_worker_id
-            case_worker_first_name
-            case_id
-            site_name
-            case_worker_last_name
-            survey_number
-            )
-    ] => ( is => 'ro' );
-
-    has adults   => ( is => 'rw', default => sub { [] } );
-    has children => ( is => 'rw', default => sub { [] } );
-    has focal_child => (
-        is      => 'rw',
-        builder => 'build_focal_child',
-        lazy    => 1,
-    );
-
-    sub has_adults   { scalar( @{ $_[0]->adults } ) }
-    sub has_children { scalar( @{ $_[0]->children } ) }
-
-    sub build_focal_child {
-        my $self            = shift;
-        my $pfc             = $self->potential_focal_children;
-        my @between_5_and_9 = grep { $_->age >= 5 && $_->age <= 9 } @$pfc;
-        my @tenyo           = grep { $_->age == 10 } @$pfc;
-        my @under5          = grep { $_->age < 5 } @$pfc;
-
-        #warn dump( \@between_5_and_9 );
-        #warn dump( \@tenyo );
-        #warn dump( \@under5 );
-        #warn dump($pfc);
-
-        return
-               shuffle(@between_5_and_9)
-            || shuffle(@tenyo)
-            || shuffle(@under5)
-            || shuffle(@$pfc);
-    }
-
-    sub worker_name {
-        my $self = shift;
-        return sprintf( "%s %s",
-            $self->case_worker_first_name,
-            $self->case_worker_last_name );
-    }
-
-    sub potential_focal_children {
-        my $self = shift;
-        return [ grep { $_->age < 11 } @{ $self->children_sorted } ];
-    }
-
-    sub as_csv_row {
-        my $self = shift;
-
-        my $row = {
-            case_id                => $self->case_id,
-            site_name              => $self->site_name,
-            site_office_name       => $self->site_office_name,
-            survey_number          => $self->survey_number,
-            case_worker_id         => $self->case_worker_id,
-            case_worker_first_name => $self->case_worker_first_name,
-            case_worker_last_name  => $self->case_worker_last_name,
-            case_worker_email      => $self->case_worker_email,
-            focal_child_id         => $self->focal_child->client_id,
-            focal_child_first_name => $self->focal_child->first_name,
-            focal_child_last_name  => $self->focal_child->last_name,
-            focal_child_dob        => $self->focal_child->dob_safe,
-        };
-
-        my $pfc = $self->potential_focal_children;
-        my $i   = 0;
-        for my $child (@$pfc) {
-            $i++;
-            $row->{"child_${i}_id"}         = $child->client_id;
-            $row->{"child_${i}_first_name"} = $child->first_name;
-            $row->{"child_${i}_last_name"}  = $child->last_name;
-            $row->{"child_${i}_dob"}        = $child->dob_safe;
-        }
-
-        $i = 0;
-        for my $adult ( @{ $self->adults_sorted } ) {
-            $i++;
-            $row->{"adult_${i}_id"}         = $adult->client_id;
-            $row->{"adult_${i}_first_name"} = $adult->first_name;
-            $row->{"adult_${i}_last_name"}  = $adult->last_name;
-            $row->{"adult_${i}_dob"}        = $adult->dob_safe;
-            $row->{"adult_${i}_street_one"} = $adult->address_one;
-            $row->{"adult_${i}_street_two"} = $adult->address_two;
-            $row->{"adult_${i}_city"}       = $adult->city;
-            $row->{"adult_${i}_state"}      = $adult->state;
-            $row->{"adult_${i}_zipcode"}    = $adult->zipcode;
-            $row->{"adult_${i}_phone"}      = $adult->preferred_phone;
-            $row->{"adult_${i}_email"}      = $adult->email;
-            $row->{"adult_${i}_role"}       = $adult->role;
-        }
-
-        return $row;
-    }
-
-    sub adults_sorted {
-        my $self    = shift;
-        my @mothers = grep { $_->role eq 'Mother' } @{ $self->adults };
-        my @fathers = grep { $_->role eq 'Father' } @{ $self->adults };
-
-        # id is not unique (alas) so we must de-dupe based on name and dob
-        my %seen;
-        my @sorted_uniq
-            = grep { !$seen{ $_->unique_id }++ } ( @mothers, @fathers );
-
-        # some names are "unknown" (case sensitive)
-        return [ grep { $_->unique_id !~ /unknown/ } @sorted_uniq ];
-    }
-
-    sub children_sorted {
-        my $self = shift;
-        my %seen;
-        my @sorted_uniq
-            = grep { !$seen{ $_->unique_id }++ } @{ $self->children };
-        return [ grep { $_->unique_id !~ /unknown/ } @sorted_uniq ];
-    }
-
-    sub eligible {
-        my $self = shift;
-        return 0 unless $self->focal_child;
-        return 0 unless scalar( @{ $self->adults_sorted } ) > 0;
-
-        # TODO skip already surveyed.
-        return 1;
-    }
-}
-
-{
-
-    package Client;
-    use Moo;
-
-    has [
-        qw(
-            id
-            last_name
-            work_phone
-            address_two
-            case_id
-            client_id
-            role
-            email
-            state
-            first_name
-            home_phone
-            dob
-            city
-            sex
-            mobile_phone
-            address_one
-            zipcode
-            )
-    ] => ( is => 'ro' );
-
-    sub dob_safe {
-        my $self = shift;
-        return ( $self->dob || "" ) . $DOB_DELIM;
-    }
-
-    sub unique_id {
-        my $self = shift;
-        ( my $first = $self->first_name_only ) =~ s/\W//g;
-        ( my $last  = $self->last_name ) =~ s/\W//g;
-        my $first_initial  = ( split( '',  $first ) )[0];
-        my $second_initial = ( split( '',  $first ) )[1];
-        my $last_initial   = ( split( '',  $last ) )[0];
-        my $year           = ( split( '-', $self->dob || '' ) )[0] || '';
-        return
-            lc(
-            join( '-', $first_initial, $second_initial, $year, $self->role )
-            );
-    }
-
-    sub first_name_only {
-        my $self = shift;
-        my $n    = $self->first_name;
-        $n =~ s/\ \w\.?$//;
-        return $n;
-    }
-
-    sub preferred_phone {
-        my $self = shift;
-        return
-               $self->mobile_phone
-            || $self->home_phone
-            || $self->work_phone;
-    }
-
-    sub age {
-        my $self = shift;
-        return 0 unless $self->dob;
-        my ($year) = ( $self->dob =~ m/^(\d+)-/ );
-        return 2019 - $year;
-    }
-}
-
-{
-
-    package Adult;
-    use Moo;
-
-    extends 'Client';
-
-}
-
-{
-
-    package Child;
-    use Moo;
-
-    extends 'Client';
-}
-
-{
-
-    package CaseWorker;
-    use Moo;
-    use List::Util qw(shuffle);
-
-    has id    => ( is => 'ro' );
-    has cases => ( is => 'rw' );
-
-    sub has_cases {
-        my $self = shift;
-        return scalar( @{ $self->cases } );
-    }
-
-    sub eligible_cases {
-        my $self = shift;
-        return [ sort { $a->case_id cmp $b->case_id } grep { $_->eligible } @{ $self->cases } ];
-    }
-
-    sub random_cases {
-        my $self = shift;
-        my $count = shift || 3;
-
-        my @shuffled = shuffle( @{ $self->eligible_cases } );
-        return [ @shuffled[ 0 .. ( $count - 1 ) ] ];
-    }
-}
-
-# unwind adults and children to group by case
-my $case_groups = {};
-for my $adult_id ( keys %$adults ) {
-    my $adult = Adult->new( $adults->{$adult_id} );
-    $case_groups->{ $adult->case_id }->{adults}->{ $adult->client_id }
-        = $adult;
-}
-for my $child_id ( keys %$children ) {
-    my $child = Child->new( $children->{$child_id} );
-    $case_groups->{ $child->case_id }->{children}->{ $child->client_id }
-        = $child;
-}
-
-#dump $case_groups;
-
-# group cases by worker
-my %worker_cases;
-my %workers;
-for my $case_id ( keys %$cases ) {
-    my $case      = Case->new( $cases->{$case_id} );
-    my $worker_id = $case->case_worker_id;
-
-    if ( $case->case_worker_email =~ /example.com/ ) {
-        warn sprintf( "Missing email for %s\n", $case->worker_name );
-    }
-
-    $case->adults(   [ values %{ $case_groups->{$case_id}->{adults} } ] );
-    $case->children( [ values %{ $case_groups->{$case_id}->{children} } ] );
-
-    push @{ $worker_cases{$worker_id} }, $case;
-}
-
-for my $worker_id ( keys %worker_cases ) {
-    my $worker = CaseWorker->new( id => $worker_id );
-    $worker->cases( $worker_cases{$worker_id} );
-    $workers{$worker_id} = $worker;
-}
-
-#dump \%workers;
-
-printf "Found %s case workers for %s cases\n", scalar( keys %workers ),
-    scalar( keys %$cases );
+printf "Found %s case workers with unsurveyed cases\n", scalar(@$workers);
 
 # create the report
 my $csv = Text::CSV_XS->new( { binary => 1, eol => $/, auto_diag => 1, } );
@@ -404,9 +105,8 @@ $csv->print( $fh, $CSV_HEADER );
 my $num_rows     = 0;
 my $max_children = 0;
 my $max_adults   = 0;
-for my $worker_id ( sort keys %workers ) {
-    my $worker = $workers{$worker_id};
-    next unless $worker->has_cases;
+for my $worker (@$workers) {
+    next unless $worker->has_related('cases');
 
     my $cases
         = $SITE_CONFIG->{cases_per_worker} eq '-1'
@@ -422,10 +122,8 @@ for my $worker_id ( sort keys %workers ) {
         $max_adults   = $num_adults if $num_adults > $max_adults;
         $max_children = $num_pfc    if $num_pfc > $max_children;
 
-        #     dump($case) if $case->case_id eq '58434';
-
-   #        printf "Random case for worker %s: %s\n", $worker_id, dump($case);
-   #        printf "Focal child: %s\n", dump( $case->focal_child );
+#        printf "Random case for worker %s: %s\n", $worker_id, dump($case->as_tree);
+#        printf "Focal child: %s\n", dump( $case->focal_child->as_tree );
 
         $csv->print_hr( $fh, $case->as_csv_row );
         $num_rows++;

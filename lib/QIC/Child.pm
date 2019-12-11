@@ -1,6 +1,6 @@
 package QIC::Child;
 use strict;
-use base qw( QIC::Record );
+use base qw( QIC::Person );
 
 __PACKAGE__->meta->setup(
     table => 'children',

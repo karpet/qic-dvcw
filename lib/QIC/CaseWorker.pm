@@ -1,6 +1,7 @@
 package QIC::CaseWorker;
 use strict;
 use base qw( QIC::Record );
+use List::Util qw(shuffle);
 
 __PACKAGE__->meta->setup(
     table => 'case_workers',
@@ -27,5 +28,21 @@ __PACKAGE__->meta->setup(
         },
     ],
 );
+
+sub eligible_cases {
+    my $self = shift;
+    return [
+        sort { $a->id cmp $b->id }
+        grep { $_->eligible } @{ $self->cases }
+    ];
+}
+
+sub random_cases {
+    my $self = shift;
+    my $count = shift || 3;
+
+    my @shuffled = shuffle( @{ $self->eligible_cases } );
+    return [ @shuffled[ 0 .. ( $count - 1 ) ] ];
+}
 
 1;

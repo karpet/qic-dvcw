@@ -1,3 +1,6 @@
 .DS_Store
 data/
 qic.db
+*-target.csv
+*.swp
+*.LOG
