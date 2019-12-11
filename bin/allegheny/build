@@ -358,6 +358,11 @@ for my $client_hash (@$clients) {
 
     next unless $client->id;
 
+    if ( $client->CHILD_SW eq 'Y' and $client->CYF_ROLE ne 'Other' ) {
+        warn "Mismatched role, both child and adult for " . dump($client);
+        next;
+    }
+
     if ( $client->CYF_ROLE eq 'Mother' or $client->CYF_ROLE eq 'Father' ) {
         $adult_count++;
         $client->address( $addr_lookup{ $client->join_id } );
