@@ -24,31 +24,31 @@ use Config::YAML;
 
 use QIC::Case;
 
-my $config = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
+my $CONFIG = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
 
-#dump $config;
-GetOptions( $config, 'help', 'sitename=s', 'datadir=s', 'surveyname=s' )
+GetOptions( $CONFIG, 'help', 'sitename=s', 'datadir=s', 'surveyname=s' )
     or pod2usage(2);
 
-#dump $config;
+dump $CONFIG;
 
-if (   $config->{help}
-    || !$config->{sitename}
-    || !$config->{datadir}
-    || !$config->{surveyname} )
+if (   $CONFIG->{help}
+    || !$CONFIG->{sitename}
+    || !$CONFIG->{datadir}
+    || !$CONFIG->{surveyname} )
 {
     pod2usage(2);
 }
 
-if ( !$config->{ $config->{sitename} } ) {
-    die "Invalid sitename (check config.yml): $config->{sitename}";
+if ( !$CONFIG->{ $CONFIG->{sitename} } ) {
+    die "Invalid sitename (check config.yml): $CONFIG->{sitename}";
 }
 
-my $DATA        = $config->{datadir};
+my $SITE_CONFIG = $CONFIG->{ $CONFIG->{sitename} };
+my $DATA        = $CONFIG->{datadir};
 my $now         = DateTime->now->set_time_zone('America/Chicago');
 my $ymd         = $now->ymd('');
 my $hms         = $now->hms('');
-my $TARGET_FILE = join( "-", $ymd, $hms, $config->{sitename}, "target.csv" );
+my $TARGET_FILE = join( "-", $ymd, $hms, $CONFIG->{sitename}, "target.csv" );
 
 my $DOB_DELIM = "\003";    # coerce Excel into not autoformatting dates in CSV
 
@@ -340,7 +340,7 @@ my $children = decode_json( read_text("$DATA/children.json") );
 
     sub eligible_cases {
         my $self = shift;
-        return [ grep { $_->eligible } @{ $self->cases } ];
+        return [ sort { $a->case_id cmp $b->case_id } grep { $_->eligible } @{ $self->cases } ];
     }
 
     sub random_cases {
@@ -408,7 +408,12 @@ for my $worker_id ( sort keys %workers ) {
     my $worker = $workers{$worker_id};
     next unless $worker->has_cases;
 
-    for my $case ( @{ $worker->random_cases(3) } ) {
+    my $cases
+        = $SITE_CONFIG->{cases_per_worker} eq '-1'
+        ? $worker->eligible_cases
+        : $worker->random_cases( $CONFIG->{cases_per_worker} );
+
+    for my $case (@$cases) {
         next unless $case;
 
         my $num_adults = scalar( @{ $case->adults_sorted } );
