@@ -15,6 +15,7 @@ create table case_workers (
   updated_at datetime
 );
 create unique index case_workers_email_index on case_workers(email);
+create unique index case_workers_id_site_index on case_workers(id, site_name);
 
 create table cases (
   id varchar(16) primary key,

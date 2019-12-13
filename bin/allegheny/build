@@ -148,6 +148,8 @@ my ( %cases, %adults, %childs );
     has address => ( is => 'rw', default => sub { Address->new } );
     has contact => ( is => 'rw', default => sub { Contact->new } );
 
+    sub case_id { shift->ENTITY_ID }
+
     sub id {
         my $self = shift;
         return
@@ -346,37 +348,6 @@ for my $email_hash (@$caseworkers) {
     $email_lookup{ $email->id } = $email;
 }
 
-# build adults and children
-my $adult_count = 0;
-my $child_count = 0;
-
-my %clients_by_join_id = ();
-
-print "Found " . scalar(@$clients) . " clients\n";
-for my $client_hash (@$clients) {
-    my $client = Client->new($client_hash);
-
-    next unless $client->id;
-
-    if ( $client->CHILD_SW eq 'Y' and $client->CYF_ROLE ne 'Other' ) {
-        warn "Mismatched role, both child and adult for " . dump($client);
-        next;
-    }
-
-    if ( $client->CYF_ROLE eq 'Mother' or $client->CYF_ROLE eq 'Father' ) {
-        $adult_count++;
-        $client->address( $addr_lookup{ $client->join_id } );
-        $client->contact( $contact_lookup{ $client->join_id } );
-        $adults{ $client->join_id } = $client->transform;
-        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
-    }
-    elsif ( $client->CHILD_SW and $client->CHILD_SW eq 'Y' ) {
-        $child_count++;
-        $childs{ $client->join_id } = $client->transform;
-        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
-    }
-}
-
 # build cases
 print "Found " . scalar(@$history) . " cases\n";
 my $case_count = 0;
@@ -400,10 +371,42 @@ for my $case_hash (@$history) {
     $cases{ $case->id } = $case->transform;
 }
 
+# build adults and children
+my $adult_count = 0;
+my $child_count = 0;
+
+my %clients_by_join_id = ();
+
+print "Found " . scalar(@$clients) . " clients\n";
+for my $client_hash (@$clients) {
+    my $client = Client->new($client_hash);
+
+    next unless $client->id;
+    next unless $cases{ $client->case_id };
+
+    if ( $client->CHILD_SW eq 'Y' and $client->CYF_ROLE ne 'Other' ) {
+        warn "Mismatched role, both child and adult for " . dump($client);
+        next;
+    }
+
+    if ( $client->CYF_ROLE eq 'Mother' or $client->CYF_ROLE eq 'Father' ) {
+        $adult_count++;
+        $client->address( $addr_lookup{ $client->join_id } );
+        $client->contact( $contact_lookup{ $client->join_id } );
+        $adults{ $client->join_id } = $client->transform;
+        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
+    }
+    elsif ( $client->CHILD_SW and $client->CHILD_SW eq 'Y' ) {
+        $child_count++;
+        $childs{ $client->join_id } = $client->transform;
+        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
+    }
+}
+
 # write out denormalized
-write_text( "$DATA/adults.json",   encode_json( \%adults ) );
-write_text( "$DATA/children.json", encode_json( \%childs ) );
-write_text( "$DATA/cases.json",    encode_json( \%cases ) );
+write_text( "$DATA/adults.json",   to_json( \%adults, {utf8 => 1, pretty => 1}) );
+write_text( "$DATA/children.json", to_json( \%childs, {utf8 => 1, pretty => 1}) );
+write_text( "$DATA/cases.json",    to_json( \%cases, {utf8 => 1, pretty => 1}) );
 
 printf "Processed %s adult parents, wrote %s unique adults\n", $adult_count,
     scalar( keys %adults );
@@ -413,6 +416,8 @@ printf "Processed %s children, wrote %s unique children\n", $child_count,
 
 printf "Processed %s cases, wrote %s cases\n", $case_count,
     scalar( keys %cases );
+
+#dump \%clients_by_join_id;
 
 # write to db
 for my $case_id ( keys %cases ) {
@@ -439,6 +444,10 @@ for my $adult_id ( keys %adults ) {
 }
 for my $child_id ( keys %childs ) {
     my $rec   = $childs{$child_id};
+    if ( !exists $cases{ $rec->{case_id} } ) {
+        warn "bad case_id in " . dump($rec);
+        next;
+    }
     my $child = QIC::Child->new(
         id         => $rec->{id},
         client_id  => $rec->{client_id},
@@ -448,5 +457,3 @@ for my $child_id ( keys %childs ) {
         dob        => $rec->{dob}
     )->insert_or_update;
 }
-
-#dump \%clients_by_join_id;
