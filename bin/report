@@ -57,7 +57,7 @@ my $CSV_HEADER = [
         case_worker_id
         case_worker_first_name
         case_worker_last_name
-        case_worker_email
+        email
         focal_child_id
         focal_child_first_name
         focal_child_last_name

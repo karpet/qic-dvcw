@@ -82,7 +82,7 @@ sub as_csv_row {
         case_worker_id         => $self->case_worker_id,
         case_worker_first_name => $self->case_worker->first_name,
         case_worker_last_name  => $self->case_worker->last_name,
-        case_worker_email      => $self->case_worker->email,
+        email                  => $self->case_worker->email,
         focal_child_id         => $self->focal_child->client_id,
         focal_child_first_name => $self->focal_child->first_name,
         focal_child_last_name  => $self->focal_child->last_name,
