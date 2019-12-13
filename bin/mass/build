@@ -18,18 +18,15 @@ my $usage = "$0 datadir";
 die $usage unless @ARGV;
 my $DATA = shift(@ARGV);
 
-#my $contact_file    = "$DATA/contacts.json";
-#my $address_file    = "$DATA/address.json";
-my $caseworker_file = "$DATA/case-workers.json";
-my $client_file     = "$DATA/clients.json";
-my $cases_file      = "$DATA/cases.json";
+my $caseworker_file       = "$DATA/case-workers.json";
+my $client_file           = "$DATA/clients.json";
+my $cases_file            = "$DATA/cases.json";
+my $caseworker_email_file = "$DATA/mass-caseworker-emails.json";
 
-#my $contacts    = decode_json( read_text($contact_file) );
-#my $addresses   = decode_json( read_text($address_file) );
-#my $history     = decode_json( read_text($history_file) );
-my $clients     = decode_json( read_binary($client_file) );
-my $cases       = decode_json( read_binary($cases_file) );
-my $caseworkers = decode_json( read_text($caseworker_file) );
+my $clients           = decode_json( read_binary($client_file) );
+my $cases             = decode_json( read_binary($cases_file) );
+my $caseworkers       = decode_json( read_text($caseworker_file) );
+my $caseworker_emails = decode_json( read_text($caseworker_email_file) );
 
 # build out cases, adults, children
 # clients are adults or children
@@ -67,6 +64,14 @@ my ( %cases, %case_workers, %adults, %childs );
             id
             client_id
             is_child
+            address_one
+            address_two
+            city
+            state
+            zipcode
+            mobile_phone
+            home_phone
+            email
             )
     ] => ( is => 'ro' );
 
@@ -100,6 +105,7 @@ my ( %cases, %case_workers, %adults, %childs );
 
 sub clean_name {
     my $n = shift;
+    return undef if !defined($n);
     $n =~ s/^\s+|\s+$//g;
     return $n;
 }
@@ -126,6 +132,22 @@ sub determine_role {
     return "Adult";
 }
 
+sub clean_zip {
+    my $z = shift;
+    return $z unless defined $z;
+    $z = clean_name($z);
+    $z = "0$z" if length($z) < 5;
+    return $z;
+}
+
+sub clean_state {
+    my $s = shift;
+    return $s unless defined $s;
+    $s = clean_name($s);
+    return "MA" if $s eq "Massachusetts";
+    return $s;
+}
+
 sub consumer_to_client {
     my $consumer = shift;
     return Client->new(
@@ -143,6 +165,13 @@ sub consumer_to_client {
             is_child    => (
                 ( $consumer->{"Role Type"} || "adult" ) eq "Consumer Child"
             ),
+            address_one  => clean_name( $consumer->{"Home Address"} ),
+            city         => clean_name( $consumer->{"Home City"} ),
+            state        => clean_state( $consumer->{"State"} ),
+            zipcode      => clean_zip( $consumer->{"Zip Code"} ),
+            mobile_phone => clean_name( $consumer->{"Phone Number 1"} ),
+            home_phone   => clean_name( $consumer->{"Phone Number 2"} ),
+            email        => clean_name( $consumer->{"E-mail"} ),
         }
     );
 }
@@ -194,22 +223,35 @@ my $child_count = 0;
 
 my %clients_by_join_id = ();
 
-print "Found " . scalar(@$clients) . " clients\n";
-for my $client_hash (@$clients) {
-    my $client = consumer_to_client($client_hash);
+my %email_lookup = ();
+for my $cwe (@$caseworker_emails) {
+    my $key = lc( $cwe->{last_name} . '-' . $cwe->{first_name} );
+    $email_lookup{$key} = $cwe->{email};
+}
 
-    next unless $client->id;
+# case workers
+printf "Found %s case workers\n", scalar(@$caseworkers);
+my $case_worker_count = 0;
+for my $cw_hash (@$caseworkers) {
+    my $case_worker = case_worker_to_case_worker($cw_hash);
 
-    if ( !$client->is_child ) {
-        $adult_count++;
-        $adults{ $client->join_id } = $client->transform;
-        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
+    next unless $case_worker->id;
+
+    my $key = lc( $case_worker->last_name . '-' . $case_worker->first_name );
+
+    my $email = $email_lookup{$key};
+
+    if (!$email) {
+    #  warn "no email for $key : " . dump($case_worker->transform);
+      printf "No email for %s %s\n", $case_worker->first_name, $case_worker->last_name;
+      next;
     }
-    elsif ( $client->is_child ) {
-        $child_count++;
-        $childs{ $client->join_id } = $client->transform;
-        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
-    }
+
+    $case_worker->{email} = $email;
+
+    $case_worker_count++;
+
+    $case_workers{ $case_worker->id } = $case_worker->transform;
 }
 
 # build cases
@@ -221,6 +263,8 @@ for my $case_hash (@$cases) {
     # skip nonsense
     next unless $case->id;
 
+    next unless $case_workers{ $case->case_worker_id };
+
     # count processed (we will skip some that don't have emails)
     $case_count++;
 
@@ -230,17 +274,24 @@ for my $case_hash (@$cases) {
     case_address_to_adult( $case_hash, $adults{ $case->id } );
 }
 
-# case workers
-printf "Found %s case workers\n", scalar(@$caseworkers);
-my $case_worker_count = 0;
-for my $cw_hash (@$caseworkers) {
-    my $case_worker = case_worker_to_case_worker($cw_hash);
+print "Found " . scalar(@$clients) . " clients\n";
+for my $client_hash (@$clients) {
+    my $client = consumer_to_client($client_hash);
 
-    next unless $case_worker->id;
+    next unless $client->id;
 
-    $case_worker_count++;
+    next unless $cases{$client->case_id};
 
-    $case_workers{ $case_worker->id } = $case_worker->transform;
+    if ( !$client->is_child ) {
+        $adult_count++;
+        $adults{ $client->join_id } = $client->transform;
+        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
+    }
+    elsif ( $client->is_child ) {
+        $child_count++;
+        $childs{ $client->join_id } = $client->transform;
+        push @{ $clients_by_join_id{ $client->join_id } }, $client->id;
+    }
 }
 
 # write out denormalized
