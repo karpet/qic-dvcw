@@ -13,6 +13,7 @@ use QIC::Case;
 use QIC::CaseWorker;
 use QIC::Adult;
 use QIC::Child;
+use QIC::Utils qw( read_json write_json clean_name );
 
 my $usage = "$0 datadir";
 die $usage unless @ARGV;
@@ -25,12 +26,12 @@ my $client_file     = "$DATA/clients.json";
 my $email_file      = "$DATA/caseworker-emails.json";
 my $caseworker_file = "$DATA/caseworker-master-list.json";
 
-my $contacts    = decode_json( read_text($contact_file) );
-my $addresses   = decode_json( read_text($address_file) );
-my $history     = decode_json( read_text($history_file) );
-my $clients     = decode_json( read_binary($client_file) );
-my $emails      = decode_json( read_text($email_file) );
-my $caseworkers = decode_json( read_text($caseworker_file) );
+my $contacts    = read_json($contact_file);
+my $addresses   = read_json($address_file);
+my $history     = read_json($history_file);
+my $clients     = read_json($client_file);
+my $emails      = read_json($email_file);
+my $caseworkers = read_json($caseworker_file);
 
 # build out cases, adults, children
 # clients are adults or children
@@ -255,13 +256,6 @@ my ( %cases, %adults, %childs );
         return $self->CAS_ID;
     }
 
-    sub clean_name {
-        my $self = shift;
-        my $n    = shift;
-        $n =~ s/^\s+|\s+$//g;
-        return $n;
-    }
-
     sub default_email {
         my $self = shift;
 
@@ -273,12 +267,12 @@ my ( %cases, %adults, %childs );
 
     sub first_name {
         my $self = shift;
-        $self->clean_name( ( split( ', ', $self->CASEWORKER_NAME ) )[1] );
+        main::clean_name( ( split( ', ', $self->CASEWORKER_NAME ) )[1] );
     }
 
     sub last_name {
         my $self = shift;
-        $self->clean_name( ( split( ', ', $self->CASEWORKER_NAME ) )[0] );
+        main::clean_name( ( split( ', ', $self->CASEWORKER_NAME ) )[0] );
     }
 
     sub first_name_only {
@@ -384,7 +378,10 @@ for my $client_hash (@$clients) {
     next unless $client->id;
     next unless $cases{ $client->case_id };
 
-    if ( $client->CHILD_SW eq 'Y' and $client->CYF_ROLE ne 'Other' ) {
+    if (    $client->CHILD_SW
+        and $client->CHILD_SW eq 'Y'
+        and $client->CYF_ROLE ne 'Other' )
+    {
         warn "Mismatched role, both child and adult for " . dump($client);
         next;
     }
@@ -404,9 +401,12 @@ for my $client_hash (@$clients) {
 }
 
 # write out denormalized
-write_text( "$DATA/adults.json",   to_json( \%adults, {utf8 => 1, pretty => 1}) );
-write_text( "$DATA/children.json", to_json( \%childs, {utf8 => 1, pretty => 1}) );
-write_text( "$DATA/cases.json",    to_json( \%cases, {utf8 => 1, pretty => 1}) );
+write_text( "$DATA/adults.json",
+    to_json( \%adults, { utf8 => 1, pretty => 1 } ) );
+write_text( "$DATA/children.json",
+    to_json( \%childs, { utf8 => 1, pretty => 1 } ) );
+write_text( "$DATA/cases.json",
+    to_json( \%cases, { utf8 => 1, pretty => 1 } ) );
 
 printf "Processed %s adult parents, wrote %s unique adults\n", $adult_count,
     scalar( keys %adults );
@@ -443,7 +443,7 @@ for my $adult_id ( keys %adults ) {
     my $adult = QIC::Adult->new(%$rec)->insert_or_update;
 }
 for my $child_id ( keys %childs ) {
-    my $rec   = $childs{$child_id};
+    my $rec = $childs{$child_id};
     if ( !exists $cases{ $rec->{case_id} } ) {
         warn "bad case_id in " . dump($rec);
         next;
