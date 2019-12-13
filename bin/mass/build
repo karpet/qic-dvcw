@@ -2,10 +2,7 @@
 
 use strict;
 use warnings;
-use JSON;
-use Text::CSV_XS;
 use Data::Dump qw( dump );
-use File::Slurper qw( read_text write_text read_binary );
 
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
@@ -13,7 +10,8 @@ use QIC::Case;
 use QIC::CaseWorker;
 use QIC::Adult;
 use QIC::Child;
-use QIC::Utils qw( clean_name clean_state clean_zip parse_date_ymd read_json write_json );
+use QIC::Utils
+    qw( clean_name clean_state clean_zip parse_date_ymd read_json write_json );
 
 my $usage = "$0 datadir";
 die $usage unless @ARGV;
@@ -24,10 +22,10 @@ my $client_file           = "$DATA/clients.json";
 my $cases_file            = "$DATA/cases.json";
 my $caseworker_email_file = "$DATA/mass-caseworker-emails.json";
 
-my $clients           = decode_json( read_binary($client_file) );
-my $cases             = decode_json( read_binary($cases_file) );
-my $caseworkers       = decode_json( read_text($caseworker_file) );
-my $caseworker_emails = decode_json( read_text($caseworker_email_file) );
+my $clients           = read_json($client_file);
+my $cases             = read_json($cases_file);
+my $caseworkers       = read_json($caseworker_file);
+my $caseworker_emails = read_json($caseworker_email_file);
 
 # build out cases, adults, children
 # clients are adults or children
@@ -208,10 +206,12 @@ for my $cw_hash (@$caseworkers) {
 
     my $email = $email_lookup{$key};
 
-    if (!$email) {
-    #  warn "no email for $key : " . dump($case_worker->transform);
-      printf "No email for %s %s\n", $case_worker->first_name, $case_worker->last_name;
-      next;
+    if ( !$email ) {
+
+        #  warn "no email for $key : " . dump($case_worker->transform);
+        printf "No email for %s %s\n", $case_worker->first_name,
+            $case_worker->last_name;
+        next;
     }
 
     $case_worker->{email} = $email;
@@ -247,7 +247,7 @@ for my $client_hash (@$clients) {
 
     next unless $client->id;
 
-    next unless $cases{$client->case_id};
+    next unless $cases{ $client->case_id };
 
     if ( !$client->is_child ) {
         $adult_count++;
@@ -262,10 +262,10 @@ for my $client_hash (@$clients) {
 }
 
 # write out denormalized
-write_text( "$DATA/adults-out.json",       encode_json( \%adults ) );
-write_text( "$DATA/children-out.json",     encode_json( \%childs ) );
-write_text( "$DATA/cases-out.json",        encode_json( \%cases ) );
-write_text( "$DATA/case_workers-out.json", encode_json( \%case_workers ) );
+write_json( "$DATA/adults-out.json",       \%adults );
+write_json( "$DATA/children-out.json",     \%childs );
+write_json( "$DATA/cases-out.json",        \%cases );
+write_json( "$DATA/case_workers-out.json", \%case_workers );
 
 printf "Processed %s adult parents, wrote %s unique adults\n",
     $adult_count,

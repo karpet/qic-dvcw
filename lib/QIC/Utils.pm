@@ -4,7 +4,14 @@ use JSON;
 use File::Slurper qw( read_text write_text read_binary );
 use Exporter qw(import);
 
-our @EXPORT = qw(write_json read_json clean_name clean_zip clean_state);
+our @EXPORT = qw(
+    write_json
+    read_json
+    clean_name
+    clean_zip
+    clean_state
+    parse_date_ymd
+);
 
 sub write_json {
     my ( $filename, $struct ) = @_;
@@ -13,7 +20,7 @@ sub write_json {
 
 sub read_json {
     my ($filename) = @_;
-    from_json( read_text($filename) );
+    from_json( read_binary($filename) );
 }
 
 sub clean_name {

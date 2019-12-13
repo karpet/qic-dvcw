@@ -2,10 +2,7 @@
 
 use strict;
 use warnings;
-use JSON;
-use Text::CSV_XS;
 use Data::Dump qw( dump );
-use File::Slurper qw( read_text write_text read_binary );
 
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
