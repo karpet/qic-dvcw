@@ -58,19 +58,21 @@ my ( %cases, %case_workers, %adults, %childs );
     has [
         qw(
             sex
+            role
             dob
             case_id
             last_name
             middle_name
             first_name
             id
+            client_id
             is_child
             )
     ] => ( is => 'ro' );
 
     sub join_id {
         my $self = shift;
-        return $self->case_id;
+        return $self->id;
     }
 }
 
@@ -113,6 +115,17 @@ sub parse_date_ymd {
     return "$year-$month-$day";
 }
 
+sub determine_role {
+    my $consumer = shift;
+    return undef
+        unless $consumer->{"Role Type"}
+        and $consumer->{"Role Type"} eq "Consumer Adult";
+    return "Adult" unless $consumer->{"Gender Identity"};
+    return "Father" if $consumer->{"Gender Identity"} eq "Male";
+    return "Mother" if $consumer->{"Gender Identity"} eq "Female";
+    return "Adult";
+}
+
 sub consumer_to_client {
     my $consumer = shift;
     return Client->new(
@@ -125,6 +138,8 @@ sub consumer_to_client {
             middle_name => $consumer->{"Middle Name"},
             first_name  => $consumer->{"First Name"},
             id          => $consumer->{"QIC Unique Person ID"},
+            client_id   => $consumer->{"QIC Unique Person ID"},
+            role        => determine_role($consumer),
             is_child    => (
                 ( $consumer->{"Role Type"} || "adult" ) eq "Consumer Child"
             ),
@@ -288,4 +303,4 @@ for my $child_id ( keys %childs ) {
     )->insert_or_update;
 }
 
-dump \%clients_by_join_id;
+#dump \%clients_by_join_id;

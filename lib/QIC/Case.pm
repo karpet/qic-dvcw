@@ -123,11 +123,12 @@ sub adults_sorted {
     my $self    = shift;
     my @mothers = grep { $_->role eq 'Mother' } @{ $self->adults };
     my @fathers = grep { $_->role eq 'Father' } @{ $self->adults };
+    my @adults  = grep { $_->role eq 'Adult' } @{ $self->adults };
 
     # id is not unique (alas) so we must de-dupe based on name and dob
     my %seen;
     my @sorted_uniq
-        = grep { !$seen{ $_->unique_id }++ } ( @mothers, @fathers );
+        = grep { !$seen{ $_->unique_id }++ } ( @mothers, @adults, @fathers );
 
     # some names are "unknown" (case sensitive)
     return [ grep { $_->unique_id !~ /unknown/ } @sorted_uniq ];
@@ -144,9 +145,27 @@ sub children_sorted {
 sub eligible {
     my $self = shift;
     return 0 unless $self->focal_child;
+
+    #warn "case has focal child";
     return 0 unless scalar( @{ $self->adults_sorted } ) > 0;
+
+    #warn "case has adults";
     return 0 if $self->surveyed_at;
+
+    #warn "case not yet surveyed";
     return 1;
+}
+
+# sequential number of the case per case_worker, over all surveys.
+sub next_survey_name {
+    my $self             = shift;
+    my $already_surveyed = $self->case_worker->find_cases(
+        query => [
+            '!surveyed_at' => undef,
+            '!id'          => $self->id
+        ]
+    );
+    return scalar(@$already_surveyed) + 1;
 }
 
 1;

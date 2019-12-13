@@ -1,6 +1,9 @@
 deps:
 	installdeps -ruRX bin lib
 
+sql:
+	sqlite3 qic.db
+
 db:
 	perl -Ilib -e 'use QIC::DB'
 

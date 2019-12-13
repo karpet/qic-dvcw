@@ -6,7 +6,7 @@ report - Create QIC target files from site data
 
 =head1 USAGE
 
- report --sitename :site: --surveyname :surveyname:
+ report --sitename :site:
 
 =cut
 
@@ -26,14 +26,13 @@ use QIC::Case;
 
 my $CONFIG = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
 
-GetOptions( $CONFIG, 'help', 'sitename=s', 'surveyname=s' )
+GetOptions( $CONFIG, 'help', 'sitename=s', )
     or pod2usage(2);
 
 #dump $CONFIG;
 
-if (   $CONFIG->{help}
-    || !$CONFIG->{sitename}
-    || !$CONFIG->{surveyname} )
+if ( $CONFIG->{help}
+    || !$CONFIG->{sitename} )
 {
     pod2usage(2);
 }
@@ -113,8 +112,12 @@ for my $worker (@$workers) {
         ? $worker->eligible_cases
         : $worker->random_cases( $CONFIG->{cases_per_worker} );
 
+    #printf "found %s eligible cases for worker %s\n", scalar(@{ $worker->eligible_cases }), $worker->id;
+
     for my $case (@$cases) {
         next unless $case;
+
+        #printf "including case %s\n", dump($case->as_tree);
 
         my $num_adults = scalar( @{ $case->adults_sorted } );
         my $num_pfc    = scalar( @{ $case->potential_focal_children } );
@@ -126,7 +129,7 @@ for my $worker (@$workers) {
 #        printf "Focal child: %s\n", dump( $case->focal_child->as_tree );
 
         $case->surveyed_at($now);
-        $case->survey_name( $CONFIG->{surveyname} );
+        $case->survey_name( $case->next_survey_name );
 
         $csv->print_hr( $fh, $case->as_csv_row );
         $num_rows++;

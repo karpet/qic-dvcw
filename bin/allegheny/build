@@ -424,14 +424,18 @@ for my $case_id ( keys %cases ) {
         email            => $case_rec->{case_worker_email},
         site_name        => "allegheny",
         site_office_name => $case_rec->{site_office_name}
-    )->load_or_save;
+    )->insert_or_update;
     my $case
         = QIC::Case->new( id => $case_id, case_worker_id => $case_worker->id )
-        ->load_or_save;
+        ->insert_or_update;
 }
 for my $adult_id ( keys %adults ) {
-    my $rec   = $adults{$adult_id};
-    my $adult = QIC::Adult->new(%$rec)->load_or_save;
+    my $rec = $adults{$adult_id};
+    if ( !exists $cases{ $rec->{case_id} } ) {
+        warn "bad case_id in " . dump($rec);
+        next;
+    }
+    my $adult = QIC::Adult->new(%$rec)->insert_or_update;
 }
 for my $child_id ( keys %childs ) {
     my $rec   = $childs{$child_id};
@@ -442,7 +446,7 @@ for my $child_id ( keys %childs ) {
         first_name => $rec->{first_name},
         last_name  => $rec->{last_name},
         dob        => $rec->{dob}
-    )->load_or_save;
+    )->insert_or_update;
 }
 
 #dump \%clients_by_join_id;

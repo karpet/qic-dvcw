@@ -43,7 +43,7 @@ __PACKAGE__->register_db(
         ( ( rand() < 0.5 ) ? ( FetchHashKeyName => 'NAME_lc' ) : () ),
     },
     post_connect_sql =>
-        [ 'PRAGMA synchronous = OFF', 'PRAGMA temp_store = MEMORY', ],
+        [ 'PRAGMA synchronous = OFF', 'PRAGMA temp_store = MEMORY', 'PRAGMA foreign_keys = ON' ],
 );
 
 1;

@@ -1,2 +1,5 @@
 allegheny:
   cases_per_worker: 3
+
+mass:
+  cases_per_worker: 3
