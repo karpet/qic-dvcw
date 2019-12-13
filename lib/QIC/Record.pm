@@ -12,6 +12,15 @@ sub init_db {
     QIC::DB->new_or_cached();
 }
 
+sub find_first {
+    my $class = shift;
+    Rose::DB::Object::Manager->get_objects(
+        object_class => $class,
+        limit        => 1,
+        sort_by      => $class->meta->primary_key_columns->[0]
+    )->[0];
+}
+
 sub apply_defaults {
     my $self   = shift;
     my $is_new = shift;
