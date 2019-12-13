@@ -174,13 +174,6 @@ my ( %cases, %adults, %childs );
         return "$year-$month-$day";
     }
 
-    sub clean {
-        my $self = shift;
-        my $n    = shift;
-        $n =~ s/^\s+|\s+$//g;
-        return $n;
-    }
-
     sub transform {
         my $self = shift;
 
@@ -191,8 +184,8 @@ my ( %cases, %adults, %childs );
             id           => $self->join_id,
             case_id      => $self->ENTITY_ID,
             client_id    => $self->CL_ID,
-            first_name   => $self->clean( $self->FRST_NME ),
-            last_name    => $self->clean( $self->LST_NME ),
+            first_name   => main::clean_name( $self->FRST_NME ),
+            last_name    => main::clean_name( $self->LST_NME ),
             dob          => $self->dob,
             role         => $self->CYF_ROLE,
             sex          => $self->SEX,
@@ -401,12 +394,9 @@ for my $client_hash (@$clients) {
 }
 
 # write out denormalized
-write_text( "$DATA/adults.json",
-    to_json( \%adults, { utf8 => 1, pretty => 1 } ) );
-write_text( "$DATA/children.json",
-    to_json( \%childs, { utf8 => 1, pretty => 1 } ) );
-write_text( "$DATA/cases.json",
-    to_json( \%cases, { utf8 => 1, pretty => 1 } ) );
+write_json( "$DATA/adults.json",   \%adults );
+write_json( "$DATA/children.json", \%childs );
+write_json( "$DATA/cases.json",    \%cases );
 
 printf "Processed %s adult parents, wrote %s unique adults\n", $adult_count,
     scalar( keys %adults );
