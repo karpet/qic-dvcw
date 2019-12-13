@@ -26,7 +26,7 @@ use QIC::Case;
 
 my $CONFIG = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
 
-GetOptions( $CONFIG, 'help', 'sitename=s', )
+GetOptions( $CONFIG, 'help', 'sitename=s', 'dry_run')
     or pod2usage(2);
 
 #dump $CONFIG;
@@ -134,7 +134,7 @@ for my $worker (@$workers) {
         $csv->print_hr( $fh, $case->as_csv_row );
         $num_rows++;
 
-        $case->save();
+        $case->save() unless $CONFIG->{dry_run};
     }
 }
 close $fh or die "$TARGET_FILE: $!";
