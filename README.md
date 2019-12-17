@@ -7,6 +7,13 @@
 * Project site is a partner organization supplying data. There are three.
 
 
+## Preparing Source data
+
+* Save each .xlsx as a separate Windows format CSV for each worksheet.
+* Convert each CSV to JSON (using the csv2json tool or similar).
+* Name each JSON file according to the site conventions (see bin/:site/build scripts e.g.).
+* `perl bin/:site/build data/:site/:ymd`
+
 ## Target file
 
 The target .csv file has dates formatted as `yyyy/mm/dd`. This is proper ISO8601 format. If you open the .csv

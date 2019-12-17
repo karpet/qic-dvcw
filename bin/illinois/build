@@ -1,0 +1,308 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Data::Dump qw( dump );
+
+use FindBin;
+use lib "$FindBin::Bin/../../lib";
+use QIC::Case;
+use QIC::CaseWorker;
+use QIC::Adult;
+use QIC::Child;
+use QIC::Utils
+    qw( clean_name clean_state clean_zip parse_date_ymd read_json write_json );
+
+my $usage = "$0 datadir";
+die $usage unless @ARGV;
+my $DATA = shift(@ARGV);
+
+my $cases_file            = "$DATA/cases.json";
+my $caseworker_email_file = "$DATA/caseworker-emails.json";
+
+my $cases             = read_json($cases_file);
+my $caseworker_emails = read_json($caseworker_email_file);
+
+# build out cases, adults, children
+# clients are adults or children
+
+my ( %cases, %case_workers, %adults, %childs );
+
+{
+
+    package TransformRole;
+    use Moo::Role;
+
+    sub transform {
+        my $self = shift;
+        return {%$self};
+    }
+
+}
+
+{
+
+    package Adult;
+    use Moo;
+
+    with 'TransformRole';
+
+    has [
+        qw(
+            sex
+            role
+            dob
+            case_id
+            last_name
+            middle_name
+            first_name
+            id
+            client_id
+            is_child
+            address_one
+            address_two
+            city
+            state
+            zipcode
+            mobile_phone
+            home_phone
+            email
+            )
+    ] => ( is => 'ro' );
+
+    sub join_id {
+        my $self = shift;
+        return $self->id;
+    }
+}
+
+{
+
+    package Child;
+    use Moo;
+
+    with 'TransformRole';
+
+    has [
+        qw(
+            case_id
+            client_id
+            first_name
+            last_name
+            dob
+            id)
+    ] => ( is => 'ro' );
+
+}
+
+{
+
+    package Case;
+    use Moo;
+
+    with 'TransformRole';
+
+    has [qw( id case_worker_id )] => ( is => 'ro' );
+}
+
+{
+
+    package CaseWorker;
+    use Moo;
+
+    with 'TransformRole';
+
+    has [qw( id first_name last_name email site_name site_office_name )] =>
+        ( is => 'ro' );
+
+}
+
+sub row_to_child {
+    my $row = shift;
+    return Child->new(
+        dob        => parse_date_ymd( $row->{"DateOfBirth"} ),
+        first_name => clean_name( $row->{"FirstName"} ),
+        last_name  => clean_name( $row->{"LastName"} ),
+        id         => $row->{"Person ID"},
+        case_id    => $row->{"SACWISCaseId"},
+        client_id  => $row->{"Person ID"},
+    );
+}
+
+sub row_to_adult {
+    my $row = shift;
+    return Adult->new(
+        {   dob        => parse_date_ymd( $row->{"DT_OF_BIRTH"} ),
+            case_id    => $row->{"SACWISCaseId"},
+            last_name  => clean_name( $row->{"NM_LAST"} ),
+            first_name => clean_name( $row->{"NM_FRST"} ),
+            id         => join( '-', $row->{"Person ID"}, $row->{"ID_PERS"} ),
+            client_id  => $row->{"ID_PERS"},
+            role  => "Adult",                          # TODO missing data
+            state => clean_state( $row->{"State"} ),
+        }
+    );
+}
+
+sub row_to_case {
+    my $case = shift;
+    return Case->new(
+        {   id             => $case->{"SACWISCaseId"},
+            case_worker_id => $case->{"WorkerId"},
+        }
+    );
+}
+
+sub row_to_case_worker {
+    my $cw = shift;
+    return CaseWorker->new(
+        {   id               => $cw->{"WorkerId"},
+            first_name       => clean_name( $cw->{"WorkerFirstName"} ),
+            last_name        => clean_name( $cw->{"WorkerLastName"} ),
+            site_office_name => $cw->{"CaseTeam"},
+        }
+    );
+}
+
+sub case_address_to_adult {
+    my ( $case_rec, $adult_rec ) = @_;
+
+    # e.g. "147 Rangeway Road, Unit 3110, Billerica, MA 01862"
+    my @addr = split( ", ", $case_rec->{"Best Address for Case"} );
+    my $parts = scalar(@addr);
+    if ( $parts == 4 ) {
+        $adult_rec->{address_one} = $addr[0];
+        $adult_rec->{address_two} = $addr[1];
+        $adult_rec->{city}        = $addr[2];
+        ( $adult_rec->{state} )   = ( $addr[3] =~ m/^(\w\w)/ );
+        ( $adult_rec->{zipcode} ) = ( $addr[3] =~ m/(\d\d\d\d\d)$/ );
+    }
+    else {
+        $adult_rec->{address_one} = $addr[0];
+        $adult_rec->{city}        = $addr[1];
+        ( $adult_rec->{state} )   = ( $addr[2] =~ m/^(\w\w)/ );
+        ( $adult_rec->{zipcode} ) = ( $addr[2] =~ m/(\d\d\d\d\d)$/ );
+    }
+}
+
+my %email_lookup = ();
+for my $cwe (@$caseworker_emails) {
+    next unless $cwe->{last_name};
+    my $key = lc( $cwe->{last_name} . '-' . $cwe->{first_name} );
+    $email_lookup{$key} = $cwe->{email};
+}
+
+my $child_count       = 0;
+my $adult_count       = 0;
+my %seen_case_worker  = ();
+my %uniq_case_workers = ();
+
+print "Found " . scalar(@$cases) . " rows\n";
+for my $case_hash (@$cases) {
+    my $case        = row_to_case($case_hash);
+    my $case_worker = row_to_case_worker($case_hash);
+    my $child       = row_to_child($case_hash);
+    my $adult       = row_to_adult($case_hash);
+
+    # skip nonsense
+    next unless $case->id;
+
+    # case worker
+    my $key = lc( $case_worker->last_name . '-' . $case_worker->first_name );
+
+    $uniq_case_workers{$key}++;
+
+    my $email = $email_lookup{$key};
+
+    if ( !$email ) {
+
+        #  warn "no email for $key : " . dump($case_worker->transform);
+        printf( "No email for %s %s\n",
+            $case_worker->first_name, $case_worker->last_name )
+            unless $seen_case_worker{$key}++;
+        next;
+    }
+
+    $case_worker->{email} = $email;
+    $case_workers{ $case_worker->id } = $case_worker->transform;
+
+    # case
+    $cases{ $case->id } = $case->transform;
+
+    # adult (unique per row)
+    if ( $adults{ $adult->id } ) {
+
+        #        warn "Already seen adult: " . dump $adult->transform;
+        #        warn "previously: " . dump $adults{ $adult->id };
+    }
+    $adults{ $adult->id } = $adult->transform;
+    $adult_count++;
+
+    # child
+    $childs{ $child->id } = $child->transform;
+}
+
+# write out denormalized
+write_json( "$DATA/adults-out.json",       \%adults );
+write_json( "$DATA/children-out.json",     \%childs );
+write_json( "$DATA/cases-out.json",        \%cases );
+write_json( "$DATA/case_workers-out.json", \%case_workers );
+
+my $case_worker_count       = scalar keys %case_workers;
+my $case_worker_email_count = scalar keys %email_lookup;
+
+printf "Processed %s adult parents, wrote %s unique adults\n",
+    $adult_count,
+    scalar( keys %adults );
+
+printf "Wrote %s unique children\n", scalar( keys %childs );
+
+my $case_count = scalar keys %cases;
+printf "Processed %s cases, wrote %s cases\n",
+    $case_count,
+    scalar( keys %cases );
+
+printf
+    "Processed %s unique case workers, from %s emails, wrote %s case workers\n",
+    scalar( keys %uniq_case_workers ),
+    $case_worker_email_count,
+    scalar( keys %case_workers );
+
+# write to db
+for my $cw_id ( keys %case_workers ) {
+    my $cw_rec      = $case_workers{$cw_id};
+    my $case_worker = QIC::CaseWorker->new(
+        id               => $cw_id,
+        first_name       => $cw_rec->{first_name},
+        last_name        => $cw_rec->{last_name},
+        email            => $cw_rec->{email},
+        site_name        => 'illinois',
+        site_office_name => $cw_rec->{site_office_name},
+    )->insert_or_update;
+}
+
+for my $case_id ( keys %cases ) {
+    my $case_rec = $cases{$case_id};
+    my $case     = QIC::Case->new(
+        id             => $case_id,
+        case_worker_id => $case_rec->{case_worker_id}
+    )->insert_or_update;
+}
+my @adult_columns = QIC::Adult->meta->column_names;
+for my $adult_id ( keys %adults ) {
+    my $rec = $adults{$adult_id};
+    my $adult = QIC::Adult->new( map { $_ => $rec->{$_} } @adult_columns )
+        ->insert_or_update;
+}
+for my $child_id ( keys %childs ) {
+    my $rec   = $childs{$child_id};
+    my $child = QIC::Child->new(
+        id         => $child_id,
+        client_id  => $rec->{client_id},
+        case_id    => $rec->{case_id},
+        first_name => $rec->{first_name},
+        last_name  => $rec->{last_name},
+        dob        => $rec->{dob}
+    )->insert_or_update;
+}
+

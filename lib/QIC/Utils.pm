@@ -54,6 +54,7 @@ sub clean_state {
     return $s unless defined $s;
     $s = clean_name($s);
     return "MA" if $s eq "Massachusetts";
+    return "IL" if $s eq "Illinois";
     return $s;
 }
 

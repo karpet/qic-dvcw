@@ -26,7 +26,7 @@ use QIC::Case;
 
 my $CONFIG = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
 
-GetOptions( $CONFIG, 'help', 'sitename=s', 'dry_run')
+GetOptions( $CONFIG, 'help', 'sitename=s', 'dry_run' )
     or pod2usage(2);
 
 #dump $CONFIG;
@@ -89,8 +89,11 @@ for my $n ( 1 .. 9 ) {
 
 my $workers = QIC::CaseWorker->fetch_all(
     require_objects => ['cases'],
-    query           => [ 'cases.surveyed_at' => undef ],
-    sort_by         => 'id'
+    query           => [
+        site_name           => $CONFIG->{sitename},
+        'cases.surveyed_at' => undef
+    ],
+    sort_by => 'id'
 );
 
 printf "Found %s case workers with unsurveyed cases\n", scalar(@$workers);
@@ -112,7 +115,7 @@ for my $worker (@$workers) {
         ? $worker->eligible_cases
         : $worker->random_cases( $CONFIG->{cases_per_worker} );
 
-    #printf "found %s eligible cases for worker %s\n", scalar(@{ $worker->eligible_cases }), $worker->id;
+#printf "found %s eligible cases for worker %s\n", scalar(@{ $worker->eligible_cases }), $worker->id;
 
     for my $case (@$cases) {
         next unless $case;

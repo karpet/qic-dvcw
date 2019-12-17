@@ -3,3 +3,6 @@ allegheny:
 
 mass:
   cases_per_worker: 3
+
+illinois:
+  cases_per_worker: 3
