@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 use Data::Dump qw( dump );
+use Digest::SHA qw( sha256_hex );
+use Struct::Diff qw(diff);
 
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
@@ -11,17 +13,30 @@ use QIC::CaseWorker;
 use QIC::Adult;
 use QIC::Child;
 use QIC::Utils
-    qw( clean_name clean_state clean_zip parse_date_ymd read_json write_json );
+    qw( clean_name clean_state clean_zip parse_date_ymd parse_date_mdy read_json write_json );
 
+my $DEBUG = $ENV{DEBUG} || 0;
 my $usage = "$0 datadir";
 die $usage unless @ARGV;
 my $DATA = shift(@ARGV);
 
 my $cases_file            = "$DATA/cases.json";
+my $locations1_file       = "$DATA/placement-cases.json";
+my $locations2_file       = "$DATA/intact-cases.json";
+my $address1_file         = "$DATA/intact-members-address.json";
+my $address2_file         = "$DATA/placement-address.json";
 my $caseworker_email_file = "$DATA/caseworker-emails.json";
 
-my $cases             = read_json($cases_file);
+my $cases = read_json($cases_file);
+my $locations
+    = [ @{ read_json($locations1_file) }, @{ read_json($locations2_file) } ];
+my $addresses
+    = [ @{ read_json($address1_file) }, @{ read_json($address2_file) } ];
+
+#$addresses = read_json($address2_file);
 my $caseworker_emails = read_json($caseworker_email_file);
+
+my $open_placement_cases = read_json($locations1_file);
 
 # build out cases, adults, children
 # clients are adults or children
@@ -46,6 +61,8 @@ my ( %cases, %case_workers, %adults, %childs );
     use Moo;
 
     with 'TransformRole';
+
+    has [qw( sha )] => ( is => 'rw' );
 
     has [
         qw(
@@ -73,6 +90,14 @@ my ( %cases, %case_workers, %adults, %childs );
     sub join_id {
         my $self = shift;
         return $self->id;
+    }
+
+    sub add_address {
+        my ( $self, $addr ) = @_;
+        $self->{address_one} = $addr->{AD_STR_STD};
+        $self->{zipcode}     = main::clean_zip( $addr->{CD_ZIP} );
+        $self->{state}       = $addr->{CD_ST};
+        $self->{city}        = main::clean_name( $addr->{AD_CITY} );
     }
 }
 
@@ -124,22 +149,30 @@ sub row_to_child {
         first_name => clean_name( $row->{"FirstName"} ),
         last_name  => clean_name( $row->{"LastName"} ),
         id         => $row->{"Person ID"},
-        case_id    => $row->{"SACWISCaseId"},
-        client_id  => $row->{"Person ID"},
+        case_id    => $row->{"IdCaseEpsd"},
+
+        #case_id    => $row->{"SACWISCaseId"},
+        client_id => join( '-', $row->{"Person ID"}, $row->{"SACWISCaseId"} ),
     );
 }
+
+# SACWISCaseId -> SACWIS ID
 
 sub row_to_adult {
     my $row = shift;
     return Adult->new(
-        {   dob        => parse_date_ymd( $row->{"DT_OF_BIRTH"} ),
-            case_id    => $row->{"SACWISCaseId"},
+        {   dob     => parse_date_ymd( $row->{"DT_OF_BIRTH"} ),
+            case_id => $row->{"IdCaseEpsd"},
+
+            #case_id    => $row->{"SACWISCaseId"},
             last_name  => clean_name( $row->{"NM_LAST"} ),
             first_name => clean_name( $row->{"NM_FRST"} ),
             id         => join( '-', $row->{"Person ID"}, $row->{"ID_PERS"} ),
-            client_id  => $row->{"ID_PERS"},
+            client_id =>
+                join( '-', $row->{"SACWISCaseId"}, $row->{"ID_PERS"} ),
             role  => "Adult",                          # TODO missing data
             state => clean_state( $row->{"State"} ),
+            sha   => sha256_hex( dump($row) ),
         }
     );
 }
@@ -147,7 +180,8 @@ sub row_to_adult {
 sub row_to_case {
     my $case = shift;
     return Case->new(
-        {   id             => $case->{"SACWISCaseId"},
+        {    #id             => $case->{"SACWISCaseId"},
+            id             => $case->{IdCaseEpsd},
             case_worker_id => $case->{"WorkerId"},
         }
     );
@@ -164,25 +198,43 @@ sub row_to_case_worker {
     );
 }
 
-sub case_address_to_adult {
-    my ( $case_rec, $adult_rec ) = @_;
+sub find_address_for_case_id_and_name {
+    my ( $case_id, $first_name, $last_name, $cycis_id, $addresses ) = @_;
 
-    # e.g. "147 Rangeway Road, Unit 3110, Billerica, MA 01862"
-    my @addr = split( ", ", $case_rec->{"Best Address for Case"} );
-    my $parts = scalar(@addr);
-    if ( $parts == 4 ) {
-        $adult_rec->{address_one} = $addr[0];
-        $adult_rec->{address_two} = $addr[1];
-        $adult_rec->{city}        = $addr[2];
-        ( $adult_rec->{state} )   = ( $addr[3] =~ m/^(\w\w)/ );
-        ( $adult_rec->{zipcode} ) = ( $addr[3] =~ m/(\d\d\d\d\d)$/ );
+    for my $addr ( @{ $addresses->{$case_id} } ) {
+        if (   lc( $addr->{adult_first_name} ) eq lc($first_name)
+            && lc( $addr->{adult_last_name} ) eq lc($last_name) )
+        {
+            return $addr;
+        }
+        if ( $addr->{cycis_id} eq $cycis_id ) {
+            return $addr;
+        }
     }
-    else {
-        $adult_rec->{address_one} = $addr[0];
-        $adult_rec->{city}        = $addr[1];
-        ( $adult_rec->{state} )   = ( $addr[2] =~ m/^(\w\w)/ );
-        ( $adult_rec->{zipcode} ) = ( $addr[2] =~ m/(\d\d\d\d\d)$/ );
+
+    return undef;
+}
+
+sub cycis_id {
+    my $r = shift;
+    return $r->{ID_CYCIS_CASE} || $r->{"CYCIS ID"} || $r->{CYCISCaseId};
+}
+
+my %cases_by_case_id                = ();
+my %open_placement_cases_by_case_id = ();
+
+for my $c (@$cases) {
+    my $case_id = $c->{SACWISCaseId};
+    $cases_by_case_id{$case_id} = $c;
+}
+
+for my $c (@$open_placement_cases) {
+    my $case_id = $c->{"SACWIS ID"};
+    if ( !exists $cases_by_case_id{$case_id} ) {
+        warn "New case $case_id";
     }
+    $c->{SACWISCaseId} = $case_id;
+    push @$cases, $c;
 }
 
 my %email_lookup = ();
@@ -192,10 +244,32 @@ for my $cwe (@$caseworker_emails) {
     $email_lookup{$key} = $cwe->{email};
 }
 
+my %address_lookup = ();    # case_id => [ addresses ]
+my $address_count  = 0;
+for my $addr (@$addresses) {
+    $addr->{adult_first_name} = clean_name( $addr->{NM_FRST} );
+    $addr->{adult_last_name}  = clean_name( $addr->{NM_LAST} );
+    $addr->{cycis_id}         = cycis_id($addr);
+    push @{ $address_lookup{ $addr->{SacwisCaseId} } }, $addr;
+    $address_count++;
+}
+printf "Found %s addresses for %s cases\n", $address_count,
+    scalar( keys %address_lookup );
+
+my %location_lookup = ();
+for my $location (@$locations) {
+    $location_lookup{ $location->{"WorkerId"} } = $location->{Location};
+}
+
+my %adult_emails = map { $_->{SacwisCaseId} => $_ }
+    @{ read_json("$DATA/intact-members-emails.json") };
+
 my $child_count       = 0;
 my $adult_count       = 0;
+my $found_address     = 0;
 my %seen_case_worker  = ();
 my %uniq_case_workers = ();
+my %seen_adults       = ();
 
 print "Found " . scalar(@$cases) . " rows\n";
 for my $case_hash (@$cases) {
@@ -206,6 +280,8 @@ for my $case_hash (@$cases) {
 
     # skip nonsense
     next unless $case->id;
+
+    my $cycis_id = cycis_id($case_hash);
 
     # case worker
     my $key = lc( $case_worker->last_name . '-' . $case_worker->first_name );
@@ -223,19 +299,39 @@ for my $case_hash (@$cases) {
         next;
     }
 
-    $case_worker->{email} = $email;
+    $case_worker->{email}             = $email;
+    $case_worker->{site_office_name}  = $location_lookup{ $case_worker->id };
     $case_workers{ $case_worker->id } = $case_worker->transform;
 
     # case
     $cases{ $case->id } = $case->transform;
 
     # adult (unique per row)
-    if ( $adults{ $adult->id } ) {
+    if ( $seen_adults{ $adult->id } && $DEBUG ) {
 
-        #        warn "Already seen adult: " . dump $adult->transform;
-        #        warn "previously: " . dump $adults{ $adult->id };
+        warn "Already seen adult: " . dump $case_hash;
+        warn "previously: " . dump $seen_adults{ $adult->id };
+        warn "diff: "
+            . dump( diff( $seen_adults{ $adult->id }, $case_hash ) );
     }
-    $adults{ $adult->id } = $adult->transform;
+    $seen_adults{ $adult->id } = $case_hash;
+
+    my $address
+        = find_address_for_case_id_and_name( $case_hash->{"SACWISCaseId"},
+        $adult->first_name, $adult->last_name, $cycis_id, \%address_lookup );
+    $adult->add_address($address) if $address;
+    $found_address++ if $address;
+
+    if ( $adult_emails{ $adult->case_id } ) {
+        my $r = $adult_emails{ $adult->case_id };
+        if (   clean_name( $r->{NM_LAST} ) eq $adult->last_name
+            && clean_name( $r->{NM_FRST} ) eq $adult->first_name )
+        {
+            $adult->{email} = $r->{AD_EMAIL_ADDR};
+        }
+    }
+
+    $adults{ $adult->sha } = $adult->transform;
     $adult_count++;
 
     # child
@@ -247,13 +343,17 @@ write_json( "$DATA/adults-out.json",       \%adults );
 write_json( "$DATA/children-out.json",     \%childs );
 write_json( "$DATA/cases-out.json",        \%cases );
 write_json( "$DATA/case_workers-out.json", \%case_workers );
+write_json( "$DATA/address-out.json",      \%address_lookup );
+
+#dump \%address_lookup;
 
 my $case_worker_count       = scalar keys %case_workers;
 my $case_worker_email_count = scalar keys %email_lookup;
 
-printf "Processed %s adult parents, wrote %s unique adults\n",
+printf
+    "Processed %s adult parents, wrote %s unique adults, %s with address\n",
     $adult_count,
-    scalar( keys %adults );
+    scalar( keys %adults ), $found_address;
 
 printf "Wrote %s unique children\n", scalar( keys %childs );
 

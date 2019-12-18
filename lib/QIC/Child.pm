@@ -7,7 +7,7 @@ __PACKAGE__->meta->setup(
 
     columns => [
         id           => { type => 'varchar', length => 32 },
-        client_id    => { type => 'varchar', length => 16 },
+        client_id    => { type => 'varchar', length => 32 },
         case_id      => { type => 'varchar', length => 16 },
         first_name   => { type => 'varchar', length => 255 },
         last_name    => { type => 'varchar', length => 255 },

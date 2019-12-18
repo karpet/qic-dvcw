@@ -31,7 +31,7 @@ create index cases_surveyed_at_index on cases(surveyed_at);
 
 create table children (
   id varchar(32) primary key,
-  client_id varchar(16),
+  client_id varchar(32),
   case_id varchar(16) not null,
   first_name varchar(255),
   last_name varchar(255),
@@ -45,7 +45,7 @@ create unique index children_client_id_case_id_index on children(client_id, case
 
 create table adults (
   id varchar(32) primary key,
-  client_id varchar(16),
+  client_id varchar(32),
   case_id varchar(16) not null,
   first_name varchar(255),
   last_name varchar(255),
