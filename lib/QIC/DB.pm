@@ -9,7 +9,9 @@ use Path::Class::File;
 
 my $base_path;
 
-for my $path ( "./", "$FindBin::Bin/..", "$FindBin::Bin/../..", "$FindBin::Bin" ) {
+my @possible_roots
+    = ( "./", "$FindBin::Bin/..", "$FindBin::Bin/../..", "$FindBin::Bin" );
+for my $path (@possible_roots) {
     if ( -s Path::Class::File->new( $path, "qic.sql" ) ) {
         $base_path = $path;
     }
@@ -21,7 +23,8 @@ if ( !$base_path ) {
 }
 
 my $sql = Path::Class::File->new( $base_path, 'qic.sql' );
-my $db  = Path::Class::File->new( $base_path, 'qic.db' );
+my $env = $ENV{QIC_ENV} || 'dev';
+my $db = Path::Class::File->new( $base_path, "qic-$env.db" );
 
 # create the db if it does not yet exist
 if ( !-s $db ) {
@@ -42,8 +45,11 @@ __PACKAGE__->register_db(
         AutoCommit => 1,
         ( ( rand() < 0.5 ) ? ( FetchHashKeyName => 'NAME_lc' ) : () ),
     },
-    post_connect_sql =>
-        [ 'PRAGMA synchronous = OFF', 'PRAGMA temp_store = MEMORY', 'PRAGMA foreign_keys = ON' ],
+    post_connect_sql => [
+        'PRAGMA synchronous = OFF',
+        'PRAGMA temp_store = MEMORY',
+        'PRAGMA foreign_keys = ON'
+    ],
 );
 
 1;
