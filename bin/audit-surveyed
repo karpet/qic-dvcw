@@ -1,0 +1,36 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+
+use QIC::DB;
+use Data::Dump qw( dump );
+use File::Slurper qw( read_lines );
+use QIC::Case;
+use QIC::CaseWorker;
+
+my $usage         = "$0 site-name surveyed-cases.csv [mark]";
+my $site_name     = shift(@ARGV) or die $usage;
+my $surveyed_file = shift(@ARGV) or die $usage;
+my $mark          = shift(@ARGV);
+
+my @case_ids = read_lines($surveyed_file);
+shift @case_ids;    # header
+
+my %case_worker_ids
+    = map { $_->id => 1 } @{ QIC::CaseWorker->for_site_name($site_name) };
+for my $case_id (@case_ids) {
+    my $case = QIC::Case->new( id => $case_id, )->load;
+    if ( !exists $case_worker_ids{ $case->case_worker_id } ) {
+        die "case $case_id is not in site $site_name: "
+            . $case->case_worker->site_name;
+    }
+    if ( !$case->surveyed_at ) {
+        warn "$case_id was not surveyed";
+        if ($mark) {
+            $case->surveyed_at($mark);
+            $case->save;
+        }
+    }
+}

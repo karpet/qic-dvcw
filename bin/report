@@ -6,7 +6,7 @@ report - Create QIC target files from site data
 
 =head1 USAGE
 
- report --sitename :site:
+ report --sitename :site: [--replacements :file-of-emails:] [--dry_run]
 
 =cut
 
@@ -19,14 +19,14 @@ use Pod::Usage;
 use JSON;
 use Text::CSV_XS;
 use Data::Dump qw( dump );
-use File::Slurper qw( read_text write_text read_binary );
+use File::Slurper qw( read_lines );
 use Config::YAML;
 
 use QIC::Case;
 
 my $CONFIG = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
 
-GetOptions( $CONFIG, 'help', 'sitename=s', 'dry_run' )
+GetOptions( $CONFIG, 'help', 'sitename=s', 'dry_run', 'replacements=s' )
     or pod2usage(2);
 
 #dump $CONFIG;
@@ -46,6 +46,15 @@ my $now         = DateTime->now->set_time_zone('America/Chicago');
 my $ymd         = $now->ymd('');
 my $hms         = $now->hms('');
 my $TARGET_FILE = join( "-", $ymd, $hms, $CONFIG->{sitename}, "target.csv" );
+my $REPLACEMENTS
+    = $CONFIG->{replacements} ? [ read_lines( $CONFIG->{replacements} ) ] : [];
+
+dump $REPLACEMENTS;
+
+# explicit list of caseworkers to use in target file.
+# one case per email instance in the replacements file.
+my %safelist_caseworkers = ();
+$safelist_caseworkers{$_}++ for @$REPLACEMENTS;
 
 my $CSV_HEADER = [
     qw(
@@ -87,16 +96,37 @@ for my $n ( 1 .. 9 ) {
     push @$CSV_HEADER, "adult_${n}_email";
 }
 
-my $workers = QIC::CaseWorker->fetch_all(
-    require_objects => ['cases'],
-    query           => [
-        site_name           => $CONFIG->{sitename},
-        'cases.surveyed_at' => undef
-    ],
-    sort_by => 'id'
-);
+my $workers;
+if ( keys %safelist_caseworkers ) {
+    $workers = QIC::CaseWorker->fetch_all(
+        require_objects => ['cases'],
+        query           => [
+            site_name           => $CONFIG->{sitename},
+            'cases.surveyed_at' => undef,
+            email               => [ sort keys %safelist_caseworkers ],
+        ],
+        sort_by => 'id'
+    );
+
+}
+else {
+    $workers = QIC::CaseWorker->fetch_all(
+        require_objects => ['cases'],
+        query           => [
+            site_name           => $CONFIG->{sitename},
+            'cases.surveyed_at' => undef
+        ],
+        sort_by => 'id'
+    );
+}
 
 printf "Found %s case workers with unsurveyed cases\n", scalar(@$workers);
+
+if ( $ENV{QIC_ENV} and $ENV{QIC_ENV} eq 'prod' and !$CONFIG->{dry_run} ) {
+
+    # make a backup before we write to the file, in case we need to rollback
+    system("make backup dump");
+}
 
 # create the report
 my $csv = Text::CSV_XS->new( { binary => 1, eol => $/, auto_diag => 1, } );
@@ -113,7 +143,8 @@ for my $worker (@$workers) {
     my $cases
         = $SITE_CONFIG->{cases_per_worker} eq '-1'
         ? $worker->eligible_cases
-        : $worker->random_cases( $CONFIG->{cases_per_worker} );
+        : $worker->random_cases( $safelist_caseworkers{ $worker->email }
+            || $CONFIG->{cases_per_worker} );
 
 #printf "found %s eligible cases for worker %s\n", scalar(@{ $worker->eligible_cases }), $worker->id;
 
