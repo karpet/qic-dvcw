@@ -28,6 +28,7 @@ create table cases (
 );
 create index cases_case_worker_id_index on cases(case_worker_id);
 create index cases_surveyed_at_index on cases(surveyed_at);
+create unique index cases_uniq_per_worker_index on cases(id, case_worker_id);
 
 create table children (
   id varchar(32) primary key,

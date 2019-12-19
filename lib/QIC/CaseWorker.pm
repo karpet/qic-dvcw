@@ -29,6 +29,11 @@ __PACKAGE__->meta->setup(
     ],
 );
 
+sub for_site_name {
+    my $class = shift;
+    return $class->fetch_all( query => [ site_name => shift ] );
+}
+
 sub eligible_cases {
     my $self = shift;
     return [

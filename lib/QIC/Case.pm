@@ -156,15 +156,20 @@ sub eligible {
     return 1;
 }
 
-# sequential number of the case per case_worker, over all surveys.
-sub next_survey_name {
-    my $self             = shift;
-    my $already_surveyed = $self->case_worker->find_cases(
+sub surveyed_cases {
+    my $self = shift;
+    return $self->case_worker->find_cases(
         query => [
             '!surveyed_at' => undef,
             '!id'          => $self->id
         ]
     );
+}
+
+# sequential number of the case per case_worker, over all surveys.
+sub next_survey_name {
+    my $self             = shift;
+    my $already_surveyed = $self->surveyed_cases;
     return scalar(@$already_surveyed) + 1;
 }
 
