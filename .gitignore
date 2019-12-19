@@ -1,6 +1,7 @@
 .DS_Store
 data/
-qic.db
 *-target.csv
 *.swp
 *.LOG
+*.db
+*-dump.sql
