@@ -49,8 +49,6 @@ my $TARGET_FILE = join( "-", $ymd, $hms, $CONFIG->{sitename}, "target.csv" );
 my $REPLACEMENTS
     = $CONFIG->{replacements} ? [ read_lines( $CONFIG->{replacements} ) ] : [];
 
-dump $REPLACEMENTS;
-
 # explicit list of caseworkers to use in target file.
 # one case per email instance in the replacements file.
 my %safelist_caseworkers = ();
