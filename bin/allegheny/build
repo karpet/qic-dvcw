@@ -400,6 +400,8 @@ printf "Processed %s cases, wrote %s cases\n", $case_count,
 #dump \%clients_by_join_id;
 
 # write to db
+QIC::DB->backup;
+
 for my $case_id ( keys %cases ) {
     my $case_rec    = $cases{$case_id};
     my $case_worker = QIC::CaseWorker->new(

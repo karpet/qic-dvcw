@@ -52,4 +52,10 @@ __PACKAGE__->register_db(
     ],
 );
 
+sub backup {
+    if ( $ENV{QIC_ENV} and $ENV{QIC_ENV} eq 'prod' ) {
+        system("make backup dump");
+    }
+}
+
 1;

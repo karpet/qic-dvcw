@@ -369,6 +369,8 @@ printf
     scalar( keys %case_workers );
 
 # write to db
+QIC::DB->backup;
+
 for my $cw_id ( keys %case_workers ) {
     my $cw_rec      = $case_workers{$cw_id};
     my $case_worker = QIC::CaseWorker->new(

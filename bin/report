@@ -123,10 +123,10 @@ else {
 
 printf "Found %s case workers with unsurveyed cases\n", scalar(@$workers);
 
-if ( $ENV{QIC_ENV} and $ENV{QIC_ENV} eq 'prod' and !$CONFIG->{dry_run} ) {
+if ( !$CONFIG->{dry_run} ) {
 
     # make a backup before we write to the file, in case we need to rollback
-    system("make backup dump");
+    QIC::DB->backup;
 }
 
 # create the report
