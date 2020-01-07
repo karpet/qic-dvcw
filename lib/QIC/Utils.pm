@@ -10,6 +10,7 @@ our @EXPORT = qw(
     clean_name
     clean_zip
     clean_state
+    parse_date
     parse_date_ymd
     parse_date_mdy
 );
@@ -31,12 +32,25 @@ sub clean_name {
     return $n;
 }
 
+sub parse_date {
+    my $date = shift or return undef;
+
+    my @parts = split(/[\/\-]/, $date);
+    if ( grep { length($_) == 4 } @parts) {
+        return $date;
+    }
+    if ($parts[0] > 31 or $parts[0] == 0) {
+        return parse_date_ymd($date);
+    }
+    return parse_date_mdy($date);
+}
+
 sub parse_date_ymd {
     my $date = shift or return undef;
 
     my ( $year2, $month, $day )
         = ( $date =~ m,^(\d+)/(\d+)/(\d+), );    # "72/3/29"
-    my $year = $year2 > 20 ? "19$year2" : "20$year2";
+    my $year = $year2 > 22 ? "19$year2" : "20$year2";
     $day   = "0$day"   if length($day) == 1;
     $month = "0$month" if length($month) == 1;
     return "$year-$month-$day";
@@ -46,7 +60,7 @@ sub parse_date_mdy {
     my $date = shift or return undef;
 
     my ( $month, $day, $year2 ) = ( $date =~ m,^(\d+)/(\d+)/(\d+), );
-    my $year = $year2 > 20 ? "19$year2" : "20$year2";
+    my $year = $year2 > 22 ? "19$year2" : "20$year2";
     $day   = "0$day"   if length($day) == 1;
     $month = "0$month" if length($month) == 1;
     return "$year-$month-$day";

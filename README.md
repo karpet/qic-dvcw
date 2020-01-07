@@ -301,6 +301,27 @@ The "parent" adults are flagged "mother" or "father". For sex equity representat
 e.g. if there are 3 mothers and 10 fathers, we want the 9 adults to include all 3 mothers and 6 of the 10 fathers.
 
 
-## TODO
+## Building
+
+### Allegheny County
+
+* create new folder `data/allegheny/yyyy-mm-dd` where `yyyy-mm-dd` is today's date
+* copy all .xlsx files to new folder
+* open each .xlsx file and save the `CSV_File_*` worksheet as Windows Comma Separated .csv file in the same folder
+* rename each .csv file to match the expected conventions of the build script. For example: `CAS_INV_ADDRESS_INFO_01032020.csv` to `address.csv` The file name conventions expected are:
+  * contacts.csv
+  * address.csv
+  * history.csv
+  * clients.csv
+  * recent-contacts.csv
+* convert each .csv file to .json format. Example: `csv2json contacts.csv > contacts.json`
+* copy the master dataset .xlsx with all case worker emails to the new folder
+* open the master dataset .xlsx and save Main worksheet as .csv
+* convert to json: `sh ../../../bin/master-csv-to-json :master-dataaset:.csv > caseworker-master-list.json`
+* from the root project directory, run the build: `perl bin/allegheny/build data/allegheny/yyyy-mm-dd`
+* if the build runs with no errors, run it in production mode: `QIC_ENV=prod perl bin/allegheny/build data/allegheny/yyyy-mm-dd`
+* create a sample target file: `perl bin/report --sitename allegheny --dry_run` (the `--dry_run` will not mark any rows as surveyed so can be run multiple times)
+* review the target file
+* if the target file passes QA, create a production version: `QIC_ENV=prod perl bin/report --sitename allegheny`
 
 

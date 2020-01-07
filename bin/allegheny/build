@@ -10,7 +10,7 @@ use QIC::Case;
 use QIC::CaseWorker;
 use QIC::Adult;
 use QIC::Child;
-use QIC::Utils qw( read_json write_json clean_name );
+use QIC::Utils qw( read_json write_json clean_name parse_date_ymd );
 
 my $usage = "$0 datadir";
 die $usage unless @ARGV;
@@ -20,14 +20,12 @@ my $contact_file    = "$DATA/contacts.json";
 my $address_file    = "$DATA/address.json";
 my $history_file    = "$DATA/history.json";
 my $client_file     = "$DATA/clients.json";
-my $email_file      = "$DATA/caseworker-emails.json";
 my $caseworker_file = "$DATA/caseworker-master-list.json";
 
 my $contacts    = read_json($contact_file);
 my $addresses   = read_json($address_file);
 my $history     = read_json($history_file);
 my $clients     = read_json($client_file);
-my $emails      = read_json($email_file);
 my $caseworkers = read_json($caseworker_file);
 
 # build out cases, adults, children
@@ -163,12 +161,7 @@ my ( %cases, %adults, %childs );
         my $self = shift;
         return undef unless $self->BRTH_DT;
 
-        my ( $month, $day, $year2 )
-            = ( $self->BRTH_DT =~ m,^(\d+)/(\d+)/(\d+) , );   # "7/21/75 0:00"
-        my $year = $year2 > 20 ? "19$year2" : "20$year2";
-        $day   = "0$day"   if length($day) == 1;
-        $month = "0$month" if length($month) == 1;
-        return "$year-$month-$day";
+        return main::parse_date_ymd( $self->BRTH_DT );
     }
 
     sub transform {
