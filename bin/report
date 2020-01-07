@@ -52,7 +52,10 @@ my $REPLACEMENTS
 # explicit list of caseworkers to use in target file.
 # one case per email instance in the replacements file.
 my %safelist_caseworkers = ();
-$safelist_caseworkers{$_}++ for @$REPLACEMENTS;
+for my $line (@$REPLACEMENTS) {
+    my ($email, $survey_number) = split(",", $line);
+    $safelist_caseworkers{$email}++;
+}
 
 my $CSV_HEADER = [
     qw(
@@ -135,8 +138,8 @@ $csv->print( $fh, $CSV_HEADER );
 my $num_rows     = 0;
 my $max_children = 0;
 my $max_adults   = 0;
-for my $worker (@$workers) {
-    next unless $worker->has_related('cases');
+WORKER: for my $worker (@$workers) {
+    next WORKER unless $worker->has_related('cases');
 
     my $cases
         = $SITE_CONFIG->{cases_per_worker} eq '-1'
@@ -146,8 +149,10 @@ for my $worker (@$workers) {
 
 #printf "found %s eligible cases for worker %s\n", scalar(@{ $worker->eligible_cases }), $worker->id;
 
-    for my $case (@$cases) {
+    CASE: for my $case (@$cases) {
         next unless $case;
+
+        next WORKER if $worker->number_of_surveys >= 10; # max surveys over lifetime of project
 
         #printf "including case %s\n", dump($case->as_tree);
 

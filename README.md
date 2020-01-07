@@ -308,6 +308,10 @@ Adults are flagged in source data as:
 The "parent" adults are flagged "mother" or "father". For sex equity representation, we want 100% of available parents represented by a single sex, up to 50% of the available adult slots.
 e.g. if there are 3 mothers and 10 fathers, we want the 9 adults to include all 3 mothers and 6 of the 10 fathers.
 
+## Replacements
+
+To create a replacements target file, we need a list of email addresses and survey numbers in order to identify which cases should be marked
+as `replaced_at`.
 
 ## Building
 

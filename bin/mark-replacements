@@ -1,0 +1,66 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use JSON;
+use Text::CSV_XS qw( csv );
+use Data::Dump qw( dump );
+use File::Slurper qw( read_lines );
+use Getopt::Long;
+
+use QIC::Case;
+
+my $usage = "$0 site [target.csv replacements.csv] [case-ids.txt]\n";
+
+my $CONFIG = {};
+GetOptions( $CONFIG, 'replacements=s', 'case_ids=s', 'targets=s', 'now=s' );
+
+my $site = shift(@ARGV) or die $usage;
+
+my ( $target_file, $replacements_file, $case_id_file );
+
+my %case_ids;
+
+if ( $CONFIG->{case_ids} ) {
+    %case_ids = map { $_ => $_ } read_lines( $CONFIG->{case_ids} );
+}
+elsif ( $CONFIG->{replacements} ) {
+    my $target_file       = $CONFIG->{replacements};
+    my $replacements_file = $CONFIG->{targets};
+    my $targets           = csv( in => $target_file, headers => "auto" );
+    my $replacements = csv( in => $replacements_file, headers => "auto" );
+
+    # build lookup by email+surveyN
+    my %cases_by_key;
+    for my $target (@$targets) {
+        my $key = $target->{email} . "-" . $target->{survey_number};
+        $cases_by_key{$key} = $target->{case_id};
+    }
+
+    for my $replacement (@$replacements) {
+        my $case_id = $cases_by_key{ $replacement->{email} . "-"
+                . $replacement->{survey_number} };
+        die "No case_id for " . dump($replacement) unless $case_id;
+
+        $case_ids{$case_id}++;
+    }
+}
+else {
+    die $usage;
+}
+
+my $now = $CONFIG->{now} || DateTime->now;
+for my $case_id ( keys %case_ids ) {
+    my $case = QIC::Case->new( id => $case_id )->load;
+
+    if ( $case->case_worker->site_name ne $site ) {
+        die "Site mismatch. Case $case_id is assigned to site "
+            . $case->case_worker->site_name;
+    }
+
+    $case->replaced_at($now);
+    $case->save;
+}
+

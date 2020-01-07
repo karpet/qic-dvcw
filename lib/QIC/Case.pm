@@ -11,6 +11,7 @@ __PACKAGE__->meta->setup(
         id             => { type => 'varchar', length => 16 },
         case_worker_id => { type => 'varchar', length => 16 },
         survey_name    => { type => 'varchar', length => 16 },
+        replaced_at    => { type => 'datetime' },
         surveyed_at    => { type => 'datetime' },
         created_at     => { type => 'datetime' },
         updated_at     => { type => 'datetime' },
@@ -116,6 +117,11 @@ sub as_csv_row {
         $row->{"adult_${i}_role"}       = $adult->role;
     }
 
+    # clean data
+    for my $k (keys %$row) {
+        $row->{$k} =~ s/^unknown$//i;
+    }
+
     return $row;
 }
 
@@ -161,6 +167,7 @@ sub surveyed_cases {
     return $self->case_worker->find_cases(
         query => [
             '!surveyed_at' => undef,
+            'replaced_at'  => undef,
             '!id'          => $self->id
         ]
     );

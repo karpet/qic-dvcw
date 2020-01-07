@@ -22,12 +22,14 @@ create table cases (
   case_worker_id varchar(16) not null,
   survey_name varchar(16),
   surveyed_at datetime,
+  replaced_at datetime,
   created_at datetime,
   updated_at datetime,
   foreign key (case_worker_id) references case_workers(id) on delete cascade
 );
 create index cases_case_worker_id_index on cases(case_worker_id);
 create index cases_surveyed_at_index on cases(surveyed_at);
+create index cases_replaced_at_index on cases(replaced_at);
 create unique index cases_uniq_per_worker_index on cases(id, case_worker_id);
 
 create table children (

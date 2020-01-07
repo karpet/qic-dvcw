@@ -34,6 +34,24 @@ sub for_site_name {
     return $class->fetch_all( query => [ site_name => shift ] );
 }
 
+sub number_of_surveys {
+    my $self = shift;
+
+    return
+          scalar( @{ $self->surveyed_cases } )
+        - scalar( @{ $self->replaced_cases } );
+}
+
+sub surveyed_cases {
+    my $self = shift;
+    return $self->find_cases( query => [ '!surveyed_at' => undef, ] );
+}
+
+sub replaced_cases {
+    my $self = shift;
+    return $self->find_cases( query => [ '!replaced_at' => undef, ] );
+}
+
 sub eligible_cases {
     my $self = shift;
     return [
