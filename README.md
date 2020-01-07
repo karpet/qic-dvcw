@@ -10,7 +10,7 @@
 ## Preparing Source data
 
 * Save each .xlsx as a separate Windows format CSV for each worksheet.
-* Convert each CSV to JSON (using the csv2json tool or similar).
+* Convert each CSV to JSON (using the [csv2json](https://github.com/darwin/csv2json) tool or similar).
 * Name each JSON file according to the site conventions (see bin/:site/build scripts e.g.).
 * `perl bin/:site/build data/:site/:ymd`
 
@@ -20,7 +20,8 @@ The target .csv file has dates formatted as `yyyy/mm/dd`. This is proper ISO8601
 file in Excel, it may re-format all the dates as `dd/mm/yy` (which is an ambiguous format)
 but that will depend on your particular system preferences.
 
-**DO NOT SAVE THE CSV** if you open it in Excel in case Excel re-writes the dates.
+To counter-act Excel's tendency to re-write dates in system-specific ways, all birthdates in the target file
+have a single byte \003 (end-of-text) appended. Depending on your system, you may see this as whitespace or not. It should be invisible to HTML rendering.
 
 ### Format
 
@@ -245,14 +246,21 @@ The QIC data model reflects the normalized attributes from all partner sites. We
 attribute names specific to our project, which may not match
 exactly how partner data models name them.
 
-### Case
+The [qic.sql](qic.sql) file has formal schema model definitions.
 
+### Case Worker
+
+* id
 * case worker first name
 * case worker last name
 * case worker email
-* case id
 * site name
 * site office name
+
+### Case
+
+* id
+* case worker id
 * survey number
 
 ### Adult
