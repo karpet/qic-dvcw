@@ -164,6 +164,14 @@ my ( %cases, %adults, %childs );
         return main::parse_date_ymd( $self->BRTH_DT );
     }
 
+    sub skip {
+        my $self = shift;
+        return 1 if $self->FRST_NME =~ m/rights terminated/i;
+        return 1 if $self->LST_NME =~ m/rights terminated/i;
+
+        return 0;
+    }
+
     sub transform {
         my $self = shift;
 
@@ -359,6 +367,7 @@ for my $client_hash (@$clients) {
     my $client = Client->new($client_hash);
 
     next unless $client->id;
+    next if $client->skip;
     next unless $cases{ $client->case_id };
 
     if (    $client->CHILD_SW
