@@ -75,6 +75,8 @@ sub focal_child {
 sub as_csv_row {
     my $self = shift;
 
+    my $focal_child = $self->focal_child;
+
     my $row = {
         case_id                => $self->id,
         site_name              => $self->case_worker->site_name,
@@ -84,10 +86,10 @@ sub as_csv_row {
         case_worker_first_name => $self->case_worker->first_name,
         case_worker_last_name  => $self->case_worker->last_name,
         email                  => $self->case_worker->email,
-        focal_child_id         => $self->focal_child->client_id,
-        focal_child_first_name => $self->focal_child->first_name,
-        focal_child_last_name  => $self->focal_child->last_name,
-        focal_child_dob        => $self->focal_child->dob_safe,
+        focal_child_id         => $focal_child->client_id,
+        focal_child_first_name => $focal_child->first_name,
+        focal_child_last_name  => $focal_child->last_name,
+        focal_child_dob        => $focal_child->dob_safe,
     };
 
     my $pfc = $self->potential_focal_children;
