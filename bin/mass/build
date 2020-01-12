@@ -87,7 +87,7 @@ my ( %cases, %case_workers, %adults, %childs );
 
     with 'TransformRole';
 
-    has [qw( id case_worker_id )] => ( is => 'ro' );
+    has [qw( id case_worker_id closed )] => ( is => 'ro' );
 }
 
 {
@@ -146,6 +146,7 @@ sub case_to_case {
     return Case->new(
         {   id             => $case->{"QIC Case ID"},
             case_worker_id => $case->{"QIC Employee ID"},
+            closed         => $case->{"Case Close Date"},
         }
     );
 }
@@ -159,28 +160,6 @@ sub case_worker_to_case_worker {
             site_office_name => $cw->{"Area Office"},
         }
     );
-}
-
-sub case_address_to_adult {
-    my ( $case_rec, $adult_rec ) = @_;
-
-    # e.g. "147 Rangeway Road, Unit 3110, Billerica, MA 01862"
-    my @addr = split( ", ", $case_rec->{"Best Address for Case"} );
-    my $parts = scalar(@addr);
-    if ( $parts == 4 ) {
-        $adult_rec->{address_one} = $addr[0];
-        $adult_rec->{address_two} = $addr[1];
-        $adult_rec->{city}        = $addr[2];
-        ( $adult_rec->{state} )   = ( $addr[3] =~ m/^(\w\w)/ );
-        ( $adult_rec->{zipcode} ) = ( $addr[3] =~ m/(\d\d\d\d\d)$/ );
-    }
-    else {
-        warn dump \@addr;
-        $adult_rec->{address_one} = $addr[0];
-        $adult_rec->{city}        = $addr[1];
-        ( $adult_rec->{state} )   = ( $addr[2] =~ m/^(\w\w)/ );
-        ( $adult_rec->{zipcode} ) = ( $addr[2] =~ m/(\d\d\d\d\d)$/ );
-    }
 }
 
 # build adults and children
@@ -233,6 +212,7 @@ for my $case_hash (@$cases) {
     # skip nonsense
     next unless $case->id;
     next unless $case->case_worker_id;
+    next if $case->closed;
 
     unless ( $case_workers{ $case->case_worker_id } ) {
 
