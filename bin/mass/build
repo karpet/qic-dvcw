@@ -175,6 +175,7 @@ sub case_address_to_adult {
         ( $adult_rec->{zipcode} ) = ( $addr[3] =~ m/(\d\d\d\d\d)$/ );
     }
     else {
+        warn dump \@addr;
         $adult_rec->{address_one} = $addr[0];
         $adult_rec->{city}        = $addr[1];
         ( $adult_rec->{state} )   = ( $addr[2] =~ m/^(\w\w)/ );
@@ -190,6 +191,8 @@ my %clients_by_join_id = ();
 
 my %email_lookup = ();
 for my $cwe (@$caseworker_emails) {
+    next unless $cwe->{last_name};
+
     my $key = lc( $cwe->{last_name} . '-' . $cwe->{first_name} );
     $email_lookup{$key} = $cwe->{email};
 }
@@ -209,8 +212,8 @@ for my $cw_hash (@$caseworkers) {
     if ( !$email ) {
 
         #  warn "no email for $key : " . dump($case_worker->transform);
-        printf "No email for %s %s\n", $case_worker->first_name,
-            $case_worker->last_name;
+        #printf "No email for %s %s\n", $case_worker->first_name,
+        #    $case_worker->last_name;
         next;
     }
 
@@ -229,16 +232,18 @@ for my $case_hash (@$cases) {
 
     # skip nonsense
     next unless $case->id;
+    next unless $case->case_worker_id;
 
-    next unless $case_workers{ $case->case_worker_id };
+    unless ( $case_workers{ $case->case_worker_id } ) {
+
+        #warn "No case worker id found for " . dump($case_hash);
+        next;
+    }
 
     # count processed (we will skip some that don't have emails)
     $case_count++;
 
     $cases{ $case->id } = $case->transform;
-
-    # TODO address is on case
-    case_address_to_adult( $case_hash, $adults{ $case->id } );
 }
 
 print "Found " . scalar(@$clients) . " clients\n";

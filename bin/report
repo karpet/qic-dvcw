@@ -47,13 +47,15 @@ my $ymd         = $now->ymd('');
 my $hms         = $now->hms('');
 my $TARGET_FILE = join( "-", $ymd, $hms, $CONFIG->{sitename}, "target.csv" );
 my $REPLACEMENTS
-    = $CONFIG->{replacements} ? [ read_lines( $CONFIG->{replacements} ) ] : [];
+    = $CONFIG->{replacements}
+    ? [ read_lines( $CONFIG->{replacements} ) ]
+    : [];
 
 # explicit list of caseworkers to use in target file.
 # one case per email instance in the replacements file.
 my %safelist_caseworkers = ();
 for my $line (@$REPLACEMENTS) {
-    my ($email, $survey_number) = split(",", $line);
+    my ( $email, $survey_number ) = split( ",", $line );
     $safelist_caseworkers{$email}++;
 }
 
@@ -145,14 +147,16 @@ WORKER: for my $worker (@$workers) {
         = $SITE_CONFIG->{cases_per_worker} eq '-1'
         ? $worker->eligible_cases
         : $worker->random_cases( $safelist_caseworkers{ $worker->email }
-            || $CONFIG->{cases_per_worker} );
+            || $SITE_CONFIG->{cases_per_worker} );
 
 #printf "found %s eligible cases for worker %s\n", scalar(@{ $worker->eligible_cases }), $worker->id;
 
-    CASE: for my $case (@$cases) {
+CASE: for my $case (@$cases) {
         next unless $case;
 
-        next WORKER if $worker->number_of_surveys >= 10; # max surveys over lifetime of project
+        next WORKER
+            if $worker->number_of_surveys
+            >= 10;    # max surveys over lifetime of project
 
         #printf "including case %s\n", dump($case->as_tree);
 
