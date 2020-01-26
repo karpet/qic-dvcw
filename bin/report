@@ -106,6 +106,7 @@ if ( keys %safelist_caseworkers ) {
         query           => [
             site_name           => $CONFIG->{sitename},
             'cases.surveyed_at' => undef,
+            'cases.closed_at'   => undef,
             email               => [ sort keys %safelist_caseworkers ],
         ],
         sort_by => 'id'
@@ -118,6 +119,7 @@ else {
         query           => [
             site_name           => $CONFIG->{sitename},
             'cases.surveyed_at' => undef
+            'cases.closed_at'   => undef
         ],
         sort_by => 'id'
     );

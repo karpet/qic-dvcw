@@ -11,6 +11,7 @@ __PACKAGE__->meta->setup(
         id             => { type => 'varchar', length => 16 },
         case_worker_id => { type => 'varchar', length => 16 },
         survey_name    => { type => 'varchar', length => 16 },
+        closed_at      => { type => 'datetime' },
         replaced_at    => { type => 'datetime' },
         surveyed_at    => { type => 'datetime' },
         created_at     => { type => 'datetime' },
@@ -152,6 +153,8 @@ sub children_sorted {
 
 sub eligible {
     my $self = shift;
+    return 0 if $self->closed_at;
+
     return 0 unless $self->focal_child;
 
     #warn "case has focal child";

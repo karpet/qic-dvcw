@@ -20,29 +20,6 @@ my $usage = "$0 datadir";
 die $usage unless @ARGV;
 my $DATA = shift(@ARGV);
 
-my $cases_file            = "$DATA/cases.json";
-my $locations1_file       = "$DATA/placement-cases.json";
-my $locations2_file       = "$DATA/intact-cases.json";
-my $address1_file         = "$DATA/intact-members-address.json";
-my $address2_file         = "$DATA/placement-address.json";
-my $caseworker_email_file = "$DATA/caseworker-emails.json";
-
-my $cases = read_json($cases_file);
-my $locations
-    = [ @{ read_json($locations1_file) }, @{ read_json($locations2_file) } ];
-my $addresses
-    = [ @{ read_json($address1_file) }, @{ read_json($address2_file) } ];
-
-#$addresses = read_json($address2_file);
-my $caseworker_emails = read_json($caseworker_email_file);
-
-my $open_placement_cases = read_json($locations1_file);
-
-# build out cases, adults, children
-# clients are adults or children
-
-my ( %cases, %case_workers, %adults, %childs );
-
 {
 
     package TransformRole;
@@ -94,9 +71,9 @@ my ( %cases, %case_workers, %adults, %childs );
 
     sub add_address {
         my ( $self, $addr ) = @_;
-        $self->{address_one} = $addr->{AD_STR_STD};
+        $self->{address_one} = main::clean_name( $addr->{AD_STR_STD} );
         $self->{zipcode}     = main::clean_zip( $addr->{CD_ZIP} );
-        $self->{state}       = $addr->{CD_ST};
+        $self->{state}       = main::clean_state( $addr->{CD_ST} );
         $self->{city}        = main::clean_name( $addr->{AD_CITY} );
     }
 }
@@ -143,35 +120,37 @@ my ( %cases, %case_workers, %adults, %childs );
 }
 
 sub row_to_child {
-    my $row = shift;
+    my $row      = shift;
+    my $cycis_id = cycis_id($row);
+    my $case_id  = $row->{SacwisCaseId} || $row->{"SACWIS ID"};
     return Child->new(
-        dob        => parse_date_ymd( $row->{"DateOfBirth"} ),
-        first_name => clean_name( $row->{"FirstName"} ),
-        last_name  => clean_name( $row->{"LastName"} ),
-        id         => $row->{"Person ID"},
-        case_id    => $row->{"IdCaseEpsd"},
-
-        #case_id    => $row->{"SACWISCaseId"},
-        client_id => join( '-', $row->{"Person ID"}, $row->{"SACWISCaseId"} ),
+        dob =>
+            parse_date_ymd( $row->{"DateOfBirth"} || $row->{"DT_OF_BIRTH"} ),
+        first_name => clean_name( $row->{"FirstName"} || $row->{"NM_FRST"} ),
+        last_name  => clean_name( $row->{"LastName"}  || $row->{"NM_LAST"} ),
+        id         => $cycis_id,
+        case_id    => $case_id,
+        client_id =>
+            join( '-', $case_id, ( $row->{"Person ID"} || $cycis_id ) ),
     );
 }
 
 # SACWISCaseId -> SACWIS ID
 
 sub row_to_adult {
-    my $row = shift;
+    my $row      = shift;
+    my $case_id  = $row->{SacwisCaseId} || $row->{"SACWIS ID"};
+    my $cycis_id = cycis_id($row);
     return Adult->new(
-        {   dob     => parse_date_ymd( $row->{"DT_OF_BIRTH"} ),
-            case_id => $row->{"IdCaseEpsd"},
-
-            #case_id    => $row->{"SACWISCaseId"},
+        {   dob        => parse_date_ymd( $row->{"DT_OF_BIRTH"} ),
+            case_id    => $case_id,
             last_name  => clean_name( $row->{"NM_LAST"} ),
             first_name => clean_name( $row->{"NM_FRST"} ),
-            id         => join( '-', $row->{"Person ID"}, $row->{"ID_PERS"} ),
+            id         => $cycis_id,
             client_id =>
-                join( '-', $row->{"SACWISCaseId"}, $row->{"ID_PERS"} ),
-            role  => "Adult",                          # TODO missing data
-            state => clean_state( $row->{"State"} ),
+                join( '-', $case_id, ( $row->{"ID_PERS"} || $cycis_id ) ),
+            role => "Adult",    # TODO missing data
+            state => clean_state( $row->{"State"} || $row->{CD_ST} ),
             sha   => sha256_hex( dump($row) ),
         }
     );
@@ -180,8 +159,7 @@ sub row_to_adult {
 sub row_to_case {
     my $case = shift;
     return Case->new(
-        {    #id             => $case->{"SACWISCaseId"},
-            id             => $case->{IdCaseEpsd},
+        {   id             => $case->{"SACWIS ID"},
             case_worker_id => $case->{"WorkerId"},
         }
     );
@@ -193,21 +171,20 @@ sub row_to_case_worker {
         {   id               => $cw->{"WorkerId"},
             first_name       => clean_name( $cw->{"WorkerFirstName"} ),
             last_name        => clean_name( $cw->{"WorkerLastName"} ),
-            site_office_name => $cw->{"CaseTeam"},
+            site_office_name => $cw->{"CaseTeam"} || $cw->{"SubRegionName"},
         }
     );
 }
 
 sub find_address_for_case_id_and_name {
-    my ( $case_id, $first_name, $last_name, $cycis_id, $addresses ) = @_;
+    my ( $first_name, $last_name, $cycis_id, $addresses ) = @_;
 
-    for my $addr ( @{ $addresses->{$case_id} } ) {
+    for my $addr ( sort { $b->{effective_date} cmp $a->{effective_date} }
+        @{ $addresses->{$cycis_id} } )
+    {
         if (   lc( $addr->{adult_first_name} ) eq lc($first_name)
             && lc( $addr->{adult_last_name} ) eq lc($last_name) )
         {
-            return $addr;
-        }
-        if ( $addr->{cycis_id} eq $cycis_id ) {
             return $addr;
         }
     }
@@ -220,21 +197,50 @@ sub cycis_id {
     return $r->{ID_CYCIS_CASE} || $r->{"CYCIS ID"} || $r->{CYCISCaseId};
 }
 
-my %cases_by_case_id                = ();
-my %open_placement_cases_by_case_id = ();
+# each row is an adult on a case
+my $placement_cases_file = "$DATA/placement-cases.json";
 
-for my $c (@$cases) {
-    my $case_id = $c->{SACWISCaseId};
-    $cases_by_case_id{$case_id} = $c;
-}
+# each row is a case
+my $intact_cases_file = "$DATA/intact-cases.json";
 
-for my $c (@$open_placement_cases) {
-    my $case_id = $c->{"SACWIS ID"};
-    if ( !exists $cases_by_case_id{$case_id} ) {
-        warn "New case $case_id";
-    }
-    $c->{SACWISCaseId} = $case_id;
-    push @$cases, $c;
+# each row is a person associated with an intact case
+my $intact_case_address_file = "$DATA/intact-members-address.json";
+
+# each row is an email address for a person on a intact member
+my $intact_case_emails_file = "$DATA/intact-members-emails.json";
+
+# each row is an address for a person on a placement case
+my $placement_case_address_file = "$DATA/placement-address.json";
+
+# each row is a caseworker
+my $caseworker_email_file = "$DATA/caseworker-emails.json";
+
+my $caseworker_emails   = read_json($caseworker_email_file);
+my $placement_cases     = read_json($placement_cases_file);
+my $intact_cases        = read_json($intact_cases_file);
+my $intact_addresses    = read_json($intact_case_address_file);
+my $intact_emails       = read_json($intact_case_emails_file);
+my $placement_addresses = read_json($placement_case_address_file);
+
+##########################################################################################################################################
+# Scott notes:
+# Placement cases should be linked to Placement address by using CYCIS ID on Placement Cases to ID_CYCIS_CASE on Placement Address.
+# The address tab will contain an address for each person with the CYCIS group.
+
+# Intact Cases should be linked to Intact Members Address by using CYCISCaseID on Intact Cases to ID_CYCIS_CASE on Intact Members Address.
+# The address tab will contain an address for each person with the CYCIS group.  So there are multiple addresses per CYCIS group.
+
+# Intact Cases should be linked to Intact Members Emails by using CYCISCaseID on Intact Cases to ID_CYCIS_CASE on Intact Members Emails.
+##########################################################################################################################################
+
+# build out cases, adults, children
+# clients are adults or children
+
+my ( %cases, %case_workers, %adults, %childs );
+
+my %location_lookup = ();
+for my $pc (@$placement_cases) {
+    $location_lookup{ $pc->{"WorkerId"} } = $pc->{Location};
 }
 
 my %email_lookup = ();
@@ -246,23 +252,19 @@ for my $cwe (@$caseworker_emails) {
 
 my %address_lookup = ();    # case_id => [ addresses ]
 my $address_count  = 0;
-for my $addr (@$addresses) {
+for my $addr (@$placement_addresses) {
     $addr->{adult_first_name} = clean_name( $addr->{NM_FRST} );
     $addr->{adult_last_name}  = clean_name( $addr->{NM_LAST} );
+    $addr->{effective_date}   = parse_date_ymd( $addr->{DT_ADDR_EFF} );
     $addr->{cycis_id}         = cycis_id($addr);
-    push @{ $address_lookup{ $addr->{SacwisCaseId} } }, $addr;
+    push @{ $address_lookup{ $addr->{cycis_id} } }, $addr;
     $address_count++;
 }
-printf "Found %s addresses for %s cases\n", $address_count,
+printf "Found %s placement addresses for %s placement cases\n",
+    $address_count,
     scalar( keys %address_lookup );
 
-my %location_lookup = ();
-for my $location (@$locations) {
-    $location_lookup{ $location->{"WorkerId"} } = $location->{Location};
-}
-
-my %adult_emails = map { $_->{SacwisCaseId} => $_ }
-    @{ read_json("$DATA/intact-members-emails.json") };
+my %adult_emails = map { cycis_id($_) => $_ } @$intact_emails;
 
 my $child_count       = 0;
 my $adult_count       = 0;
@@ -271,12 +273,13 @@ my %seen_case_worker  = ();
 my %uniq_case_workers = ();
 my %seen_adults       = ();
 
-print "Found " . scalar(@$cases) . " rows\n";
-for my $case_hash (@$cases) {
+for my $case_hash (@$placement_cases) {
     my $case        = row_to_case($case_hash);
     my $case_worker = row_to_case_worker($case_hash);
     my $child       = row_to_child($case_hash);
     my $adult       = row_to_adult($case_hash);
+
+    my $case_id = $case_hash->{"SACWIS ID"};
 
     # skip nonsense
     next unless $case->id;
@@ -316,14 +319,15 @@ for my $case_hash (@$cases) {
     }
     $seen_adults{ $adult->id } = $case_hash;
 
-    my $address
-        = find_address_for_case_id_and_name( $case_hash->{"SACWISCaseId"},
-        $adult->first_name, $adult->last_name, $cycis_id, \%address_lookup );
+    my $address = find_address_for_case_id_and_name(
+        $adult->first_name, $adult->last_name,
+        $cycis_id,          \%address_lookup
+    );
     $adult->add_address($address) if $address;
     $found_address++ if $address;
 
-    if ( $adult_emails{ $adult->case_id } ) {
-        my $r = $adult_emails{ $adult->case_id };
+    if ( $adult_emails{ $adult->id } ) {
+        my $r = $adult_emails{ $adult->id };
         if (   clean_name( $r->{NM_LAST} ) eq $adult->last_name
             && clean_name( $r->{NM_FRST} ) eq $adult->first_name )
         {
@@ -337,6 +341,84 @@ for my $case_hash (@$cases) {
     # child
     $childs{ $child->id } = $child->transform;
 }
+
+printf(
+    "Found %s valid placement cases out of %s adult rows\n",
+    scalar( keys %cases ),
+    scalar(@$placement_cases)
+);
+
+# intact cases
+my %intact_case_lookup = ();
+for my $intact_case (@$intact_cases) {
+
+    #    dump $intact_case;
+
+    my $case_worker = row_to_case_worker($intact_case);
+    my $key = lc( $case_worker->last_name . '-' . $case_worker->first_name );
+
+    $uniq_case_workers{$key}++;
+
+    my $email = $email_lookup{$key};
+
+    if ( !$email ) {
+
+        #  warn "no email for $key : " . dump($case_worker->transform);
+        printf( "No email for %s %s\n",
+            $case_worker->first_name, $case_worker->last_name )
+            unless $seen_case_worker{$key}++;
+        next;
+    }
+
+    $case_worker->{email} = $email;
+    $case_worker->{site_office_name} ||= $location_lookup{ $case_worker->id };
+    $case_workers{ $case_worker->id } = $case_worker->transform;
+
+    my $intact_case_id = cycis_id($intact_case);
+    $intact_case_lookup{$intact_case_id}
+        = { case => $intact_case, case_worker => $case_worker };
+}
+
+printf(
+    "Found %s valid intact cases out of %s\n",
+    scalar( keys %intact_case_lookup ),
+    scalar(@$intact_cases)
+);
+
+my $intact_case_count = 0;
+for my $intact_member (@$intact_addresses) {
+    my $case_id        = $intact_member->{SacwisCaseId};
+    my $intact_case_id = cycis_id($intact_member);
+    my $intact_case    = $intact_case_lookup{$intact_case_id};
+
+    if ( !$intact_case ) {
+
+        # warn "No intact case for $intact_case_id";
+        next;
+    }
+
+    my $case = Case->new(
+        id             => $case_id,
+        case_worker_id => $intact_case->{case_worker}->id
+    );
+    $cases{ $case->id } = $case->transform;
+    $intact_case_count++;
+
+    # adults, children
+    if ( $intact_member->{age} >= 18 ) {
+        my $adult = row_to_adult($intact_member);
+        $adult->add_address($intact_member);
+        $adults{ $adult->sha } = $adult->transform;
+        $adult_count++;
+        $found_address++;
+    }
+    else {
+        my $child = row_to_child($intact_member);
+        $childs{ $child->id } = $child->transform;
+    }
+}
+
+printf( "Matched %s intact cases to clients\n", $intact_case_count );
 
 # write out denormalized
 write_json( "$DATA/adults-out.json",       \%adults );
@@ -356,11 +438,7 @@ printf
     scalar( keys %adults ), $found_address;
 
 printf "Wrote %s unique children\n", scalar( keys %childs );
-
-my $case_count = scalar keys %cases;
-printf "Processed %s cases, wrote %s cases\n",
-    $case_count,
-    scalar( keys %cases );
+printf "Wrote %s total cases\n",     scalar( keys %cases );
 
 printf
     "Processed %s unique case workers, from %s emails, wrote %s case workers\n",

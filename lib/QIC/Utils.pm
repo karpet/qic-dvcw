@@ -35,11 +35,11 @@ sub clean_name {
 sub parse_date {
     my $date = shift or return undef;
 
-    my @parts = split(/[\/\-]/, $date);
-    if ( grep { length($_) == 4 } @parts) {
+    my @parts = split( /[\/\-]/, $date );
+    if ( grep { length($_) == 4 } @parts ) {
         return $date;
     }
-    if ($parts[0] > 31 or $parts[0] == 0) {
+    if ( $parts[0] > 31 or $parts[0] == 0 ) {
         return parse_date_ymd($date);
     }
     return parse_date_mdy($date);
@@ -71,6 +71,10 @@ sub clean_zip {
     return $z unless defined $z;
     $z = clean_name($z);
     $z = "0$z" if length($z) < 5;
+    if ( length($z) == 9 ) {
+        my ( $p1, $p2 ) = ( $z =~ m/^(\d\d\d\d\d)(\d\d\d\d)$/ );
+        $z = "$p1-$p2";
+    }
     return $z;
 }
 

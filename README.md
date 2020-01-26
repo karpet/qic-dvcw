@@ -329,7 +329,7 @@ as `replaced_at`.
 * convert each .csv file to .json format. Example: `csv2json contacts.csv > contacts.json`
 * copy the master dataset .xlsx with all case worker emails to the new folder
 * open the master dataset .xlsx and save Main worksheet as .csv
-* convert to json: `sh ../../../bin/master-csv-to-json :master-dataaset:.csv > caseworker-master-list.json`
+* convert to json: `sh ../../../bin/master-csv-to-json :master-dataset:.csv > caseworker-master-list.json`
 * from the root project directory, run the build: `perl bin/allegheny/build data/allegheny/yyyy-mm-dd`
 * if the build runs with no errors, run it in production mode: `QIC_ENV=prod perl bin/allegheny/build data/allegheny/yyyy-mm-dd`
 * create a sample target file: `perl bin/report --sitename allegheny --dry_run` (the `--dry_run` will not mark any rows as surveyed so can be run multiple times)
@@ -355,3 +355,23 @@ as `replaced_at`.
 * create a sample target file: `perl bin/report --sitename mass --dry_run` (the `--dry_run` will not mark any rows as surveyed so can be run multiple times)
 * review the target file
 * if the target file passes QA, create a production version: `QIC_ENV=prod perl bin/report --sitename mass`
+
+### Illinois
+
+* create new folder `data/illinois/yyyy-mm-dd` where `yyyy-mm-dd` is today's date
+* copy all .xlsx files to new folder
+* open each .xlsx file and save each worksheet as Windows Comma Separated .csv file in the same folder. For Illinois we expect these files named this way:
+  * `intact-cases.csv`
+  * `intact-members-emails.csv`
+  * `intact-members-address.csv`
+  * `placement-address.csv`
+  * `placement-cases.csv`
+* convert each .csv file to .json format. Example: `csv2json intact-cases.csv > intact-cases.json`
+* copy the master dataset .xlsx with all caseworker emails to the new folder. Example name `IL Master Dataset 01.01.20.xlsx`.
+* open the master dataset .xlsx and save Main worksheet as .csv
+* convert to json: `sh ../../../bin/master-csv-to-json :master-dataset:.csv > caseworker-emails.json`
+* from the root project directory, run the build: `perl bin/allegheny/build data/illinois/yyyy-mm-dd`
+* if the build runs with no errors, run it in production mode: `QIC_ENV=prod perl bin/allegheny/build data/illinois/yyyy-mm-dd`
+* create a sample target file: `perl bin/report --sitename illinois --dry_run` (the `--dry_run` will not mark any rows as surveyed so can be run multiple times)
+* review the target file
+* if the target file passes QA, create a production version: `QIC_ENV=prod perl bin/report --sitename illinois`
