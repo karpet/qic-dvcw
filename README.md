@@ -330,6 +330,7 @@ as `replaced_at`.
 * copy the master dataset .xlsx with all case worker emails to the new folder
 * open the master dataset .xlsx and save Main worksheet as .csv
 * convert to json: `sh ../../../bin/master-csv-to-json :master-dataset:.csv > caseworker-master-list.json`
+* copy the production db back to dev: `cp qic-prod.db qic-dev.db`
 * from the root project directory, run the build: `perl bin/allegheny/build data/allegheny/yyyy-mm-dd`
 * if the build runs with no errors, run it in production mode: `QIC_ENV=prod perl bin/allegheny/build data/allegheny/yyyy-mm-dd`
 * create a sample target file: `perl bin/report --sitename allegheny --dry_run` (the `--dry_run` will not mark any rows as surveyed so can be run multiple times)
@@ -350,6 +351,7 @@ as `replaced_at`.
 * copy the master dataset .xlsx with all case worker emails to the new folder
 * open the master dataset .xlsx and save Main worksheet as .csv
 * convert to json: `sh ../../../bin/master-csv-to-json :master-dataaset:.csv > mass-caseworker-emails.json`
+* copy the production db back to dev: `cp qic-prod.db qic-dev.db`
 * from the root project directory, run the build: `perl bin/mass/build data/mass/yyyy-mm-dd`
 * if the build runs with no errors, run it in production mode: `QIC_ENV=prod perl bin/mass/build data/mass/yyyy-mm-dd`
 * create a sample target file: `perl bin/report --sitename mass --dry_run` (the `--dry_run` will not mark any rows as surveyed so can be run multiple times)
@@ -370,6 +372,7 @@ as `replaced_at`.
 * copy the master dataset .xlsx with all caseworker emails to the new folder. Example name `IL Master Dataset 01.01.20.xlsx`.
 * open the master dataset .xlsx and save Main worksheet as .csv
 * convert to json: `sh ../../../bin/master-csv-to-json :master-dataset:.csv > caseworker-emails.json`
+* copy the production db back to dev: `cp qic-prod.db qic-dev.db`
 * from the root project directory, run the build: `perl bin/allegheny/build data/illinois/yyyy-mm-dd`
 * if the build runs with no errors, run it in production mode: `QIC_ENV=prod perl bin/allegheny/build data/illinois/yyyy-mm-dd`
 * create a sample target file: `perl bin/report --sitename illinois --dry_run` (the `--dry_run` will not mark any rows as surveyed so can be run multiple times)
