@@ -166,6 +166,7 @@ my ( %cases, %adults, %childs );
 
     sub skip {
         my $self = shift;
+        return 1 unless $self->FRST_NME && $self->LST_NME;
         return 1 if $self->FRST_NME =~ m/rights terminated/i;
         return 1 if $self->LST_NME =~ m/rights terminated/i;
 
@@ -321,9 +322,11 @@ for my $addr_hash (@$addresses) {
 }
 my %contact_lookup;
 for my $contact_hash (@$contacts) {
+    next unless scalar( keys %$contact_hash );
     my $contact = Contact->new($contact_hash);
     my $uniq_id = $contact->id . "-" . ( $contact->SEQ_NBR || 1 );
-    die "multiple contacts" if $contact_lookup{$uniq_id}++;
+    die "multiple contacts: " . dump($contact_hash)
+        if $contact_lookup{$uniq_id}++;
     $contact_lookup{ $contact->id } = $contact;
 }
 my %email_lookup;
@@ -411,6 +414,10 @@ printf "Processed %s cases, wrote %s cases\n", $case_count,
 # write to db
 QIC::DB->backup;
 
+# track existing non-surveyed cases so we can mark them "closed" if they are not present here.
+my %existing_case_ids = map { $_->id => 1 }
+    QIC::Case->open_eligible_cases_for_site_name("allegheny");
+
 for my $case_id ( keys %cases ) {
     my $case_rec    = $cases{$case_id};
     my $case_worker = QIC::CaseWorker->new(
@@ -424,6 +431,7 @@ for my $case_id ( keys %cases ) {
     my $case
         = QIC::Case->new( id => $case_id, case_worker_id => $case_worker->id )
         ->insert_or_update;
+    delete $existing_case_ids{$case_id};
 }
 for my $adult_id ( keys %adults ) {
     my $rec = $adults{$adult_id};
@@ -447,4 +455,14 @@ for my $child_id ( keys %childs ) {
         last_name  => $rec->{last_name},
         dob        => $rec->{dob}
     )->insert_or_update;
+}
+
+printf(
+    "Found %s existing non-surveyed cases not in current build, marking them closed\n",
+    scalar( keys %existing_case_ids ) );
+my $now = DateTime->now->set_time_zone('America/Chicago');
+for my $case_id ( keys %existing_case_ids ) {
+    my $case = QIC::Case->new( id => $case_id )->load;
+    $case->closed_at($now);
+    $case->save;
 }

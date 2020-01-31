@@ -42,6 +42,29 @@ __PACKAGE__->meta->setup(
     ],
 );
 
+sub open_eligible_cases_for_site_name {
+    my $class = shift;
+    my $site_name = shift or Carp::confess("site_name required");
+
+    # must join against case workers for site
+    my $workers = QIC::CaseWorker->fetch_all(
+        require_objects => ['cases'],
+        query           => [
+            site_name           => $site_name,
+            'cases.surveyed_at' => undef,
+            'cases.closed_at'   => undef,
+        ],
+        sort_by => 'id'
+    );
+
+    # only those eligible cases for the workers
+    my @all_cases = ();
+    for my $worker (@$workers) {
+        push @all_cases, @{ $worker->cases };
+    }
+    return grep { $_->eligible } @all_cases;
+}
+
 sub worker_name {
     my $self = shift;
     return sprintf( "%s %s",
@@ -121,7 +144,7 @@ sub as_csv_row {
     }
 
     # clean data
-    for my $k (keys %$row) {
+    for my $k ( keys %$row ) {
         $row->{$k} =~ s/^unknown$//i;
     }
 
