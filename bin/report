@@ -118,8 +118,8 @@ else {
         require_objects => ['cases'],
         query           => [
             site_name           => $CONFIG->{sitename},
-            'cases.surveyed_at' => undef
-            'cases.closed_at'   => undef
+            'cases.surveyed_at' => undef,
+            'cases.closed_at'   => undef,
         ],
         sort_by => 'id'
     );
