@@ -331,6 +331,7 @@ for my $contact_hash (@$contacts) {
 }
 my %email_lookup;
 for my $email_hash (@$caseworkers) {
+    next unless $email_hash{status} eq "1 - active";
     my $email = Email->new($email_hash);
     next unless $email->email;
     $email_lookup{ $email->id } = $email;

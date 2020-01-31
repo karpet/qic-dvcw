@@ -2,4 +2,4 @@
 
 JPRETTY='json_pp --json_opt=canonical,pretty'
 
-csv2json $1 | $JPRETTY | jq '[ .[] | { first_name: ."First Name", last_name: ."Last Name", email: ."Email Address" }]'
+csv2json $1 | $JPRETTY | jq '[ .[] | { status: ."Study / Employment Status", first_name: ."First Name", last_name: ."Last Name", email: ."Email Address" }]'

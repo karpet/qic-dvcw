@@ -246,6 +246,7 @@ for my $pc (@$placement_cases) {
 my %email_lookup = ();
 for my $cwe (@$caseworker_emails) {
     next unless $cwe->{last_name};
+    next unless $cwe{status} eq "1 - active";
     my $key = lc( $cwe->{last_name} . '-' . $cwe->{first_name} );
     $email_lookup{$key} = $cwe->{email};
 }
