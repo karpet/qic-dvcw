@@ -1,0 +1,57 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use JSON;
+use Text::CSV_XS qw( csv );
+use Data::Dump qw( dump );
+use File::Slurper qw( read_lines );
+use Getopt::Long;
+
+use QIC::Case;
+
+my $usage = "$0 target.csv";
+my $target_file = shift or die $usage;
+
+my $csv = Text::CSV_XS->new( { binary => 1, auto_diag => 1 } );
+open my $fh, "<", $target_file;
+my @headers = $csv->header($fh);
+
+my $rows = csv( in => $target_file, headers => "auto" );
+
+# iterate over rows.
+# consider a "skip" by survey_number + email.
+# mark sent for sent cases.
+# out "skipped" rows to csv, increment survey_number
+
+my %seen;
+my @new_csv;
+my $now = DateTime->now->set_time_zone('America/Chicago');
+for my $row (@$rows) {
+    my $key = $row->{email} . "-" . $row->{survey_number};
+    if ( $seen{$key}++ ) {
+
+        # previously skipped.
+        my $new_num = $row->{survey_number} + $seen{$key} - 1;
+        my $new_row = {%$row};
+        $new_row->{survey_number} = $new_num;
+        push @new_csv, $new_row;
+
+    }
+
+    # find the case, mark it sent
+    # for both situations (already sent, will be sent)
+    my $case = QIC::Case->new( id => $row->{case_id} )->load;
+
+    if ( $case->surveyed_at ) {
+        warn "Already surveyed_at " . $case->as_tree;
+        next;
+    }
+
+    $case->surveyed_at($now);
+    $case->save;
+}
+
+csv( out => *STDOUT, headers => \@headers, in => \@new_csv );
