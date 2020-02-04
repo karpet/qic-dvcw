@@ -45,7 +45,9 @@ my $SITE_CONFIG = $CONFIG->{ $CONFIG->{sitename} };
 my $now         = DateTime->now->set_time_zone('America/Chicago');
 my $ymd         = $now->ymd('');
 my $hms         = $now->hms('');
-my $TARGET_FILE = join( "-", $ymd, $hms, $CONFIG->{sitename}, "target.csv" );
+my $target_type = $CONFIG->{dry_run} ? 'dry-run' : 'target';
+my $TARGET_FILE
+    = join( "-", $ymd, $hms, $CONFIG->{sitename}, "${target_type}.csv" );
 my $REPLACEMENTS
     = $CONFIG->{replacements}
     ? [ read_lines( $CONFIG->{replacements} ) ]
