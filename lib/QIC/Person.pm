@@ -9,6 +9,13 @@ sub dob_safe {
     return ( $self->dob ? $self->dob->ymd('-') : "" ) . $DOB_DELIM;
 }
 
+sub zip_safe {
+    my $self = shift;
+
+    # same thing for ZIP codes (do not treat as Int)
+    return $self->zipcode . $DOB_DELIM;
+}
+
 sub unique_id {
     my $self = shift;
     ( my $first = $self->first_name_only ) =~ s/\W//g;

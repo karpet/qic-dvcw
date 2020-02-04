@@ -137,7 +137,7 @@ sub as_csv_row {
         $row->{"adult_${i}_street_two"} = $adult->address_two;
         $row->{"adult_${i}_city"}       = $adult->city;
         $row->{"adult_${i}_state"}      = $adult->state;
-        $row->{"adult_${i}_zipcode"}    = $adult->zipcode;
+        $row->{"adult_${i}_zipcode"}    = $adult->zip_safe;
         $row->{"adult_${i}_phone"}      = $adult->preferred_phone;
         $row->{"adult_${i}_email"}      = $adult->email;
         $row->{"adult_${i}_role"}       = $adult->role;
