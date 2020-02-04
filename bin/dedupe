@@ -31,6 +31,7 @@ my @new_csv;
 my $now = DateTime->now->set_time_zone('America/Chicago');
 for my $row (@$rows) {
     my $key = $row->{email} . "-" . $row->{survey_number};
+    my $survey_name = $row->{survey_number};
     if ( $seen{$key}++ ) {
 
         # previously skipped.
@@ -38,7 +39,7 @@ for my $row (@$rows) {
         my $new_row = {%$row};
         $new_row->{survey_number} = $new_num;
         push @new_csv, $new_row;
-
+        $survey_name = $new_num;
     }
 
     # find the case, mark it sent
@@ -46,11 +47,12 @@ for my $row (@$rows) {
     my $case = QIC::Case->new( id => $row->{case_id} )->load;
 
     if ( $case->surveyed_at ) {
-        warn "Already surveyed_at " . $case->as_tree;
+        warn "Already surveyed_at " . dump( $case->as_tree );
         next;
     }
 
     $case->surveyed_at($now);
+    $case->survey_name($survey_name);
     $case->save;
 }
 
