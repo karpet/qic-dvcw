@@ -65,6 +65,10 @@ sub random_cases {
     my $count = shift || 3;
 
     my @shuffled = shuffle( @{ $self->eligible_cases } );
+    if ( scalar(@shuffled) <= $count ) {
+        return [@shuffled];
+    }
+
     return [ @shuffled[ 0 .. ( $count - 1 ) ] ];
 }
 

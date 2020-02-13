@@ -27,8 +27,8 @@ if ( $CONFIG->{case_ids} ) {
     %case_ids = map { $_ => $_ } read_lines( $CONFIG->{case_ids} );
 }
 elsif ( $CONFIG->{replacements} ) {
-    my $target_file       = $CONFIG->{replacements};
-    my $replacements_file = $CONFIG->{targets};
+    my $target_file       = $CONFIG->{targets};
+    my $replacements_file = $CONFIG->{replacements};
     my $targets           = csv( in => $target_file, headers => "auto" );
     my $replacements = csv( in => $replacements_file, headers => "auto" );
 

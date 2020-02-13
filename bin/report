@@ -147,15 +147,34 @@ my $max_adults   = 0;
 WORKER: for my $worker (@$workers) {
     next WORKER unless $worker->has_related('cases');
 
+    my $cases_per_worker = $safelist_caseworkers{ $worker->email }
+        || $SITE_CONFIG->{cases_per_worker};
+    my $is_replacement = exists $safelist_caseworkers{ $worker->email };
+    my $use_random_cases = $is_replacement || ( $cases_per_worker > -1 );
     my $cases
-        = $SITE_CONFIG->{cases_per_worker} eq '-1'
-        ? $worker->eligible_cases
-        : $worker->random_cases( $safelist_caseworkers{ $worker->email }
-            || $SITE_CONFIG->{cases_per_worker} );
+        = $use_random_cases
+        ? $worker->random_cases($cases_per_worker)
+        : $worker->eligible_cases;
+
+    if ($is_replacement) {
+        printf( "Replacement file for %s, fetched %s new cases\n",
+            $worker->id, scalar(@$cases) );
+    }
 
 #printf "found %s eligible cases for worker %s\n", scalar(@{ $worker->eligible_cases }), $worker->id;
 
 CASE: for my $case (@$cases) {
+        if ($is_replacement) {
+            printf(
+                "Worker %s has %s surveyed cases out of %s (%s total), working on %s\n",
+                $worker->id,
+                $worker->number_of_surveys,
+                scalar( @{ $worker->eligible_cases } ),
+                $worker->has_related('cases'),
+                $case->id
+            );
+        }
+
         next unless $case;
 
         next WORKER
