@@ -146,7 +146,7 @@ sub case_to_case {
     return Case->new(
         {   id             => $case->{"QIC Case ID"},
             case_worker_id => $case->{"QIC Employee ID"},
-            closed         => $case->{"Case Close Date"},
+            closed         => parse_date_ymd( $case->{"Case Close Date"} ),
         }
     );
 }
@@ -213,7 +213,23 @@ for my $case_hash (@$cases) {
     # skip nonsense
     next unless $case->id;
     next unless $case->case_worker_id;
-    next if $case->closed;
+    if ( $case->closed ) {
+
+        #printf( "Found closed case %s\n", $case->id );
+        my $qic_case = QIC::Case->new( id => $case->id )->load_speculative;
+        if ($qic_case) {
+            if ( !$qic_case->closed_at ) {
+                printf( " Found case %s in QIC db, marking closed\n",
+                    $case->id );
+                $qic_case->closed_at( $case->closed );
+                $qic_case->save;
+            }
+            else {
+                # printf(" Found in QIC db, already closed\n");
+            }
+        }
+        next;
+    }
 
     unless ( $case_workers{ $case->case_worker_id } ) {
 

@@ -24,7 +24,7 @@ sub find_first {
 sub apply_defaults {
     my $self   = shift;
     my $is_new = shift;
-    my $now    = DateTime->now();
+    my $now    = DateTime->now()->set_time_zone('America/Chicago');
 
     for my $column ( $self->meta->columns ) {
         my $name       = $column->name;
