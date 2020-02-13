@@ -11,7 +11,7 @@ use QIC::CaseWorker;
 use QIC::Adult;
 use QIC::Child;
 use QIC::Utils
-    qw( clean_name clean_state clean_zip parse_date_ymd read_json write_json );
+    qw( clean_name clean_phone clean_state clean_zip parse_date_ymd read_json write_json );
 
 my $usage = "$0 datadir";
 die $usage unless @ARGV;
@@ -134,8 +134,8 @@ sub consumer_to_client {
             city         => clean_name( $consumer->{"Home City"} ),
             state        => clean_state( $consumer->{"State"} ),
             zipcode      => clean_zip( $consumer->{"Zip Code"} ),
-            mobile_phone => clean_name( $consumer->{"Phone Number 1"} ),
-            home_phone   => clean_name( $consumer->{"Phone Number 2"} ),
+            mobile_phone => clean_phone( $consumer->{"Phone Number 1"} ),
+            home_phone   => clean_phone( $consumer->{"Phone Number 2"} ),
             email        => clean_name( $consumer->{"E-mail"} ),
         }
     );

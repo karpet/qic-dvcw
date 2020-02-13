@@ -8,6 +8,7 @@ our @EXPORT = qw(
     write_json
     read_json
     clean_name
+    clean_phone
     clean_zip
     clean_state
     parse_date
@@ -30,6 +31,13 @@ sub clean_name {
     return undef if !defined($n);
     $n =~ s/^\s+|\s+$//g;
     return $n;
+}
+
+sub clean_phone {
+    my $p = shift;
+    $p = clean_name($p);
+    $p =~ s,[^\d\-\.\ ]+,,g;
+    return $p;
 }
 
 sub parse_date {

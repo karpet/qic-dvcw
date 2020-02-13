@@ -342,15 +342,15 @@ as `replaced_at`.
 * create new folder `data/mass/yyyy-mm-dd` where `yyyy-mm-dd` is today's date
 * copy all .xlsx files to new folder
 * open each .xlsx file and save each worksheet as Windows Comma Separated .csv file in the same folder
-* you may need to re-use the caseworker .xlsx from the previous month. It is named `MA List of current caseworkers.xlsx`.
+* you may need to re-use the caseworker .xlsx from the previous month. It is named `MA List of current caseworkers.xlsx`. Alternately, use the `case-workers.json` from the previous month.
 * rename each .csv file to match the expected conventions of the build script. The file name conventions expected are:
   * `MA List of current caseworkers.xlsx` => `case-workers.csv`
   * `Consumer Level Detail` => `clients.csv`
   * `Case Level Details` => `cases.csv`
 * convert each .csv file to .json format. Example: `csv2json cases.csv > cases.json`
 * copy the master dataset .xlsx with all case worker emails to the new folder
-* open the master dataset .xlsx and save Main worksheet as .csv
-* convert to json: `sh ../../../bin/master-csv-to-json :master-dataaset:.csv > mass-caseworker-emails.json`
+* open the master dataset .xlsx and save Main worksheet as `mass-caseworker-emails.csv`
+* convert to json: `sh ../../../bin/master-csv-to-json mass-caseworker-emails.csv > mass-caseworker-emails.json`
 * copy the production db back to dev: `cp qic-prod.db qic-dev.db`
 * from the root project directory, run the build: `perl bin/mass/build data/mass/yyyy-mm-dd`
 * if the build runs with no errors, run it in production mode: `QIC_ENV=prod perl bin/mass/build data/mass/yyyy-mm-dd`
