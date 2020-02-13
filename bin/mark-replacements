@@ -51,7 +51,7 @@ else {
     die $usage;
 }
 
-my $now = $CONFIG->{now} || DateTime->now;
+my $now = $CONFIG->{now} || DateTime->now->set_time_zone('America/Chicago');
 for my $case_id ( keys %case_ids ) {
     my $case = QIC::Case->new( id => $case_id )->load;
 
