@@ -1,0 +1,5 @@
+#!/bin/sh
+
+JPRETTY='json_pp --json_opt=canonical,pretty'
+
+csv2json $1 | $JPRETTY | jq '[ .[] | { email: ."email", survey_number: ."survey_number" }]' | json2csv

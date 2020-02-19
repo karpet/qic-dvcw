@@ -58,6 +58,7 @@ my $REPLACEMENTS
 my %safelist_caseworkers = ();
 for my $line (@$REPLACEMENTS) {
     my ( $email, $survey_number ) = split( ",", $line );
+    next if $email eq 'email'; # header row
     $safelist_caseworkers{$email}++;
 }
 
