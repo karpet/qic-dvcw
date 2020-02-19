@@ -313,6 +313,20 @@ e.g. if there are 3 mothers and 10 fathers, we want the 9 adults to include all 
 To create a replacements target file, we need a list of email addresses and survey numbers in order to identify which cases should be marked
 as `replaced_at`.
 
+There are two steps involved:
+
+* mark replacements in the db
+* create new target file
+
+In this example, we start with a data/mass/mass-replacement-2020-02-14.csv file with at least 3 columns: `email` and `survey_number` and `case_id`.
+
+```
+% cp qic-prod.db qic-dev.db
+% perl bin/make-replacement-target-file mass data/mass/mass-replacement-2020-02-14.csv
+# sanity check manually, then in prod
+% QIC_ENV=prod perl bin/make-replacement-target-file mass data/mass/mass-replacement-2020-02-14.csv
+```
+
 ## Building
 
 ### Allegheny County

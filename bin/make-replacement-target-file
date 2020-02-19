@@ -1,0 +1,25 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+
+my $usage                 = "$0 site replacement-input.csv\n";
+my $site                  = shift @ARGV or die $usage;
+my $replacement_input_csv = shift @ARGV or die $usage;
+
+sub run_it {
+    my $cmd = shift;
+    print $cmd, $/;
+    system($cmd) and die "$cmd failed: $!\n";
+}
+
+run_it(
+    "sh bin/extract-case-ids $replacement_input_csv > ${replacement_input_csv}-case-ids"
+);
+run_it(
+    "sh bin/make-replacement-from-csv $replacement_input_csv > ${replacement_input_csv}-emails"
+);
+run_it(
+    "perl bin/mark-replacements $site --case_ids=${replacement_input_csv}-case-ids"
+);
+run_it(
+    "perl bin/report --site $site --replacements ${replacement_input_csv}-emails");

@@ -12,7 +12,7 @@ use Getopt::Long;
 
 use QIC::Case;
 
-my $usage = "$0 site [target.csv replacements.csv] [case-ids.txt]\n";
+my $usage = "$0 site [--target=target.csv --replacement=replacements.csv] [--case_ids=case-ids.txt]\n";
 
 my $CONFIG = {};
 GetOptions( $CONFIG, 'replacements=s', 'case_ids=s', 'targets=s', 'now=s' );
@@ -40,8 +40,10 @@ elsif ( $CONFIG->{replacements} ) {
     }
 
     for my $replacement (@$replacements) {
+        my $survey_number = $replacement->{survey_number};
+        $survey_number =~ s/R//;
         my $case_id = $cases_by_key{ $replacement->{email} . "-"
-                . $replacement->{survey_number} };
+                . $survey_number };
         die "No case_id for " . dump($replacement) unless $case_id;
 
         $case_ids{$case_id}++;

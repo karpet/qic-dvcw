@@ -17,7 +17,7 @@ use lib "$FindBin::Bin/../lib";
 use Getopt::Long;
 use Pod::Usage;
 use JSON;
-use Text::CSV_XS;
+use Text::CSV_XS qw( csv );
 use Data::Dump qw( dump );
 use File::Slurper qw( read_lines );
 use Config::YAML;
@@ -46,19 +46,19 @@ my $now         = DateTime->now->set_time_zone('America/Chicago');
 my $ymd         = $now->ymd('');
 my $hms         = $now->hms('');
 my $target_type = $CONFIG->{dry_run} ? 'dry-run' : 'target';
+$target_type = 'replacements' if $CONFIG->{replacements};
 my $TARGET_FILE
     = join( "-", $ymd, $hms, $CONFIG->{sitename}, "${target_type}.csv" );
 my $REPLACEMENTS
     = $CONFIG->{replacements}
-    ? [ read_lines( $CONFIG->{replacements} ) ]
+    ? csv( in => $CONFIG->{replacements}, headers => "auto" )
     : [];
 
 # explicit list of caseworkers to use in target file.
 # one case per email instance in the replacements file.
 my %safelist_caseworkers = ();
 for my $line (@$REPLACEMENTS) {
-    my ( $email, $survey_number ) = split( ",", $line );
-    next if $email eq 'email'; # header row
+    my $email = $line->{email};
     $safelist_caseworkers{$email}++;
 }
 
@@ -142,23 +142,35 @@ $csv->column_names($CSV_HEADER);
 open my $fh, ">:encoding(utf8)", $TARGET_FILE or die "$TARGET_FILE: $!";
 $csv->print( $fh, $CSV_HEADER );
 
-my $num_rows     = 0;
-my $max_children = 0;
-my $max_adults   = 0;
+my $num_rows         = 0;
+my $max_children     = 0;
+my $max_adults       = 0;
+my %seen_replacement = ();
 WORKER: for my $worker (@$workers) {
-    next WORKER unless $worker->has_related('cases');
-
     my $cases_per_worker = $safelist_caseworkers{ $worker->email }
         || $SITE_CONFIG->{cases_per_worker};
     my $is_replacement = exists $safelist_caseworkers{ $worker->email };
     my $use_random_cases = $is_replacement || ( $cases_per_worker > -1 );
+
+    if ($is_replacement) {
+        printf(
+            "Worker %s, has %s total cases, %s surveyed, %s replaced\n",
+            $worker->id,
+            $worker->has_related('cases'),
+            $worker->number_of_surveyed_cases,
+            $worker->number_of_replaced_cases,
+        );
+    }
+
+    next WORKER unless $worker->has_related('cases');
+
     my $cases
         = $use_random_cases
         ? $worker->random_cases($cases_per_worker)
         : $worker->eligible_cases;
 
     if ($is_replacement) {
-        printf( "Replacement file for %s, fetched %s new cases\n",
+        printf( "Worker %s, fetched %s new cases\n",
             $worker->id, scalar(@$cases) );
     }
 
@@ -167,7 +179,7 @@ WORKER: for my $worker (@$workers) {
 CASE: for my $case (@$cases) {
         if ($is_replacement) {
             printf(
-                "Worker %s has %s surveyed cases out of %s (%s total), working on %s\n",
+                "Worker %s has %s surveys out of %s eligible (%s total) cases, working on new case %s\n",
                 $worker->id,
                 $worker->number_of_surveys,
                 scalar( @{ $worker->eligible_cases } ),
@@ -194,9 +206,26 @@ CASE: for my $case (@$cases) {
 #        printf "Focal child: %s\n", dump( $case->focal_child->as_tree );
 
         $case->surveyed_at($now);
-        $case->survey_name( $case->next_survey_name );
 
-        $csv->print_hr( $fh, $case->as_csv_row );
+        # survey_name depends on whether this is a replacement or not.
+        my $survey_name = $case->next_survey_name;
+        if ($is_replacement) {
+
+            # find the first replacement row for this email
+            # that we have not seen and re-use name.
+            for my $r (@$REPLACEMENTS) {
+                next if $r->{email} ne $worker->email;
+                warn dump $r;
+                next
+                    if $seen_replacement{ $r->{email} }->{ $r->{survey_number} }++;
+                $survey_name = $r->{survey_number};
+                $survey_name =~ s/R//;
+                last;
+            }
+        }
+        $case->survey_name($survey_name);
+
+        $csv->print_hr( $fh, $case->as_csv_row( $CONFIG->{replacements} ) );
         $num_rows++;
 
         $case->save() unless $CONFIG->{dry_run};

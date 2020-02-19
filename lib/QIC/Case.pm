@@ -98,14 +98,16 @@ sub focal_child {
 
 sub as_csv_row {
     my $self = shift;
+    my $is_replacement = shift || 0;
 
     my $focal_child = $self->focal_child;
 
     my $row = {
-        case_id                => $self->id,
-        site_name              => $self->case_worker->site_name,
-        site_office_name       => $self->case_worker->site_office_name,
-        survey_number          => $self->survey_name,
+        case_id          => $self->id,
+        site_name        => $self->case_worker->site_name,
+        site_office_name => $self->case_worker->site_office_name,
+        survey_number =>
+            sprintf( "%s%s", $self->survey_name, $is_replacement ? "R" : "" ),
         case_worker_id         => $self->case_worker_id,
         case_worker_first_name => $self->case_worker->first_name,
         case_worker_last_name  => $self->case_worker->last_name,
