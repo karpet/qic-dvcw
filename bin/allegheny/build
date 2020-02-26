@@ -139,7 +139,7 @@ my ( %cases, %adults, %childs );
             BRTH_DT
             CHILD_SW
             )
-    ] => ( is => 'ro' );
+    ] => ( is => 'rw' );
 
     has address => ( is => 'rw', default => sub { Address->new } );
     has contact => ( is => 'rw', default => sub { Contact->new } );
@@ -331,7 +331,9 @@ for my $contact_hash (@$contacts) {
 }
 my %email_lookup;
 for my $email_hash (@$caseworkers) {
-    next unless $email_hash->{status} and $email_hash->{status} eq "1 - active";
+    next
+        unless $email_hash->{status}
+        and $email_hash->{status} eq "1 - active";
     my $email = Email->new($email_hash);
     next unless $email->email;
     $email_lookup{ $email->id } = $email;
@@ -378,8 +380,20 @@ for my $client_hash (@$clients) {
         and $client->CHILD_SW eq 'Y'
         and $client->CYF_ROLE ne 'Other' )
     {
-        warn "Mismatched role, both child and adult for " . dump($client);
-        next;
+        #warn "Mismatched role, both child and adult for " . dump($client);
+        warn "Mismatched role, both child and adult for "
+            . $client->ENTITY_ID . "\n";
+
+        #next;
+        # clean up based on birthdate
+        my $dob = $client->dob;
+        my $age = QIC::Utils::age($dob);
+        if ( $age >= 18 ) {
+            $client->CHILD_SW("N");
+        }
+        else {
+            $client->CYF_ROLE("Other");
+        }
     }
 
     if ( $client->CYF_ROLE eq 'Mother' or $client->CYF_ROLE eq 'Father' ) {

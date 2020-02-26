@@ -14,7 +14,14 @@ our @EXPORT = qw(
     parse_date
     parse_date_ymd
     parse_date_mdy
+    age
 );
+
+sub age {
+    my $dob = shift;
+    my ($year) = ( $dob =~ m/^(\d+)-/ );
+    return 2020 - $year;
+}
 
 sub write_json {
     my ( $filename, $struct ) = @_;

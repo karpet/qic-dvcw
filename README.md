@@ -335,12 +335,13 @@ In this example, we start with a data/mass/mass-replacement-2020-02-14.csv file 
 * copy all .xlsx files to new folder
 * open each .xlsx file and save the `CSV_File_*` worksheet as Windows Comma Separated .csv file in the same folder
 * rename each .csv file to match the expected conventions of the build script. For example: `CAS_INV_ADDRESS_INFO_01032020.csv` to `address.csv` The file name conventions expected are:
-  * contacts.csv
-  * address.csv
-  * history.csv
-  * clients.csv
-  * recent-contacts.csv
+  * `CAS_INV_ELECTRONIC_CONTACT_INFO_*` -> `contacts.csv`
+  * `CAS_INV_ADDRESS_INFO_*` -> `address.csv`
+  * `CAS_INV_IPV_HISTORY_*` -> `history.csv`
+  * `CAS_INV_IPV_HISTORY_CLIENTS_*` -> `clients.csv`
+  * `CAS_INV_MOSTRECENTCONTACTS_*` -> `recent-contacts.csv`
 * convert each .csv file to .json format. Example: `csv2json contacts.csv > contacts.json`
+  * NOTE if there are encoding problems with bad UTF-8, diagnose with `utf8check clients.csv` and hand-edit. Can often be avoided if saved as Windows CSV.
 * copy the master dataset .xlsx with all case worker emails to the new folder
 * open the master dataset .xlsx and save Main worksheet as .csv
 * convert to json: `sh ../../../bin/master-csv-to-json :master-dataset:.csv > caseworker-master-list.json`

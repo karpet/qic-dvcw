@@ -1,6 +1,7 @@
 package QIC::Person;
 use strict;
 use base qw( QIC::Record );
+use QIC::Utils;
 
 our $DOB_DELIM = "\003";   # coerce Excel into not autoformatting dates in CSV
 
@@ -47,8 +48,7 @@ sub preferred_phone {
 sub age {
     my $self = shift;
     return 0 unless $self->dob;
-    my ($year) = ( $self->dob =~ m/^(\d+)-/ );
-    return 2019 - $year;
+    return QIC::Utils::age($self->dob);
 }
 
 1;
