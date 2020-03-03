@@ -5,4 +5,4 @@ mass:
   cases_per_worker: 2
 
 illinois:
-  cases_per_worker: 3
+  cases_per_worker: 2
