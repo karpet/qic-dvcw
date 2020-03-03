@@ -65,6 +65,13 @@ sub parse_date_ymd {
 
     my ( $year2, $month, $day )
         = ( $date =~ m,^(\d+)/(\d+)/(\d+), );    # "72/3/29"
+
+    if ( length($year2) > 2 and $year2 < 1900 ) {
+
+        # we got nonsense
+        return undef;
+    }
+
     my $year = $year2 > 22 ? "19$year2" : "20$year2";
     $day   = "0$day"   if length($day) == 1;
     $month = "0$month" if length($month) == 1;

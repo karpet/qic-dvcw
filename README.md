@@ -388,8 +388,8 @@ In this example, we start with a data/mass/mass-replacement-2020-02-14.csv file 
 * open the master dataset .xlsx and save Main worksheet as .csv
 * convert to json: `sh ../../../bin/master-csv-to-json :master-dataset:.csv > caseworker-emails.json`
 * copy the production db back to dev: `cp qic-prod.db qic-dev.db`
-* from the root project directory, run the build: `perl bin/allegheny/build data/illinois/yyyy-mm-dd`
-* if the build runs with no errors, run it in production mode: `QIC_ENV=prod perl bin/allegheny/build data/illinois/yyyy-mm-dd`
+* from the root project directory, run the build: `perl bin/illinois/build data/illinois/yyyy-mm-dd`
+* if the build runs with no errors, run it in production mode: `QIC_ENV=prod perl bin/ilinois/build data/illinois/yyyy-mm-dd`
 * create a sample target file: `perl bin/report --sitename illinois --dry_run` (the `--dry_run` will not mark any rows as surveyed so can be run multiple times)
 * review the target file
 * if the target file passes QA, create a production version: `QIC_ENV=prod perl bin/report --sitename illinois`

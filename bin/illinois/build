@@ -123,6 +123,8 @@ sub row_to_child {
     my $row      = shift;
     my $cycis_id = cycis_id($row);
     my $case_id  = $row->{SacwisCaseId} || $row->{"SACWIS ID"};
+    return unless $case_id;
+
     return Child->new(
         dob =>
             parse_date_ymd( $row->{"DateOfBirth"} || $row->{"DT_OF_BIRTH"} ),
@@ -169,8 +171,8 @@ sub row_to_case_worker {
     my $cw = shift;
     return CaseWorker->new(
         {   id               => $cw->{"WorkerId"},
-            first_name       => clean_name( $cw->{"WorkerFirstName"} ),
-            last_name        => clean_name( $cw->{"WorkerLastName"} ),
+            first_name       => clean_name( $cw->{"WorkerFirstName"} ) || "",
+            last_name        => clean_name( $cw->{"WorkerLastName"} ) || "",
             site_office_name => $cw->{"CaseTeam"} || $cw->{"SubRegionName"},
         }
     );
@@ -240,6 +242,7 @@ my ( %cases, %case_workers, %adults, %childs );
 
 my %location_lookup = ();
 for my $pc (@$placement_cases) {
+    next unless $pc->{"WorkerId"};
     $location_lookup{ $pc->{"WorkerId"} } = $pc->{Location};
 }
 
@@ -258,6 +261,8 @@ for my $addr (@$placement_addresses) {
     $addr->{adult_last_name}  = clean_name( $addr->{NM_LAST} );
     $addr->{effective_date}   = parse_date_ymd( $addr->{DT_ADDR_EFF} );
     $addr->{cycis_id}         = cycis_id($addr);
+    next unless $addr->{cycis_id};
+
     push @{ $address_lookup{ $addr->{cycis_id} } }, $addr;
     $address_count++;
 }
@@ -265,7 +270,12 @@ printf "Found %s placement addresses for %s placement cases\n",
     $address_count,
     scalar( keys %address_lookup );
 
-my %adult_emails = map { cycis_id($_) => $_ } @$intact_emails;
+my %adult_emails = ();
+for my $iemail (@$intact_emails) {
+    my $id = cycis_id($iemail);
+    next unless $id;
+    $adult_emails{$id} = $iemail;
+}
 
 my $child_count       = 0;
 my $adult_count       = 0;
@@ -275,10 +285,10 @@ my %uniq_case_workers = ();
 my %seen_adults       = ();
 
 for my $case_hash (@$placement_cases) {
-    my $case        = row_to_case($case_hash);
-    my $case_worker = row_to_case_worker($case_hash);
-    my $child       = row_to_child($case_hash);
-    my $adult       = row_to_adult($case_hash);
+    my $case        = row_to_case($case_hash)        or next;
+    my $case_worker = row_to_case_worker($case_hash) or next;
+    my $child       = row_to_child($case_hash)       or next;
+    my $adult       = row_to_adult($case_hash)       or next;
 
     my $case_id = $case_hash->{"SACWIS ID"};
 
@@ -390,7 +400,9 @@ my $intact_case_count = 0;
 for my $intact_member (@$intact_addresses) {
     my $case_id        = $intact_member->{SacwisCaseId};
     my $intact_case_id = cycis_id($intact_member);
-    my $intact_case    = $intact_case_lookup{$intact_case_id};
+    next unless $intact_case_id;
+
+    my $intact_case = $intact_case_lookup{$intact_case_id};
 
     if ( !$intact_case ) {
 
@@ -405,6 +417,9 @@ for my $intact_member (@$intact_addresses) {
     $cases{ $case->id } = $case->transform;
     $intact_case_count++;
 
+    # filter out bad dob/age
+    next if $intact_member->{age} eq '99';
+
     # adults, children
     if ( $intact_member->{age} >= 18 ) {
         my $adult = row_to_adult($intact_member);
@@ -414,7 +429,7 @@ for my $intact_member (@$intact_addresses) {
         $found_address++;
     }
     else {
-        my $child = row_to_child($intact_member);
+        my $child = row_to_child($intact_member) or next;
         $childs{ $child->id } = $child->transform;
     }
 }
