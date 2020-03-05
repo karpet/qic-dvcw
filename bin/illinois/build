@@ -5,7 +5,7 @@ use warnings;
 use Data::Dump qw( dump );
 use Digest::SHA qw( sha256_hex );
 use Struct::Diff qw(diff);
-
+use Try::Tiny;
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
 use QIC::Case;
@@ -140,17 +140,18 @@ sub row_to_child {
 # SACWISCaseId -> SACWIS ID
 
 sub row_to_adult {
-    my $row      = shift;
-    my $case_id  = $row->{SacwisCaseId} || $row->{"SACWIS ID"};
-    my $cycis_id = cycis_id($row);
+    my $row       = shift;
+    my $case_id   = $row->{SacwisCaseId} || $row->{"SACWIS ID"};
+    my $cycis_id  = cycis_id($row);
+    my $person_id = $row->{"ID_PERS"} || $row->{"id_pers"} || $cycis_id;
+
     return Adult->new(
         {   dob        => parse_date_ymd( $row->{"DT_OF_BIRTH"} ),
             case_id    => $case_id,
             last_name  => clean_name( $row->{"NM_LAST"} ),
             first_name => clean_name( $row->{"NM_FRST"} ),
-            id         => $cycis_id,
-            client_id =>
-                join( '-', $case_id, ( $row->{"ID_PERS"} || $cycis_id ) ),
+            id         => join( '-', $cycis_id, $person_id ),
+            client_id  => join( '-', $case_id, $person_id ),
             role => "Adult",    # TODO missing data
             state => clean_state( $row->{"State"} || $row->{CD_ST} ),
             sha   => sha256_hex( dump($row) ),
@@ -346,7 +347,7 @@ for my $case_hash (@$placement_cases) {
         }
     }
 
-    $adults{ $adult->sha } = $adult->transform;
+    $adults{ $adult->id } = $adult->transform;
     $adult_count++;
 
     # child
@@ -396,7 +397,8 @@ printf(
     scalar(@$intact_cases)
 );
 
-my $intact_case_count = 0;
+my $intact_case_count    = 0;
+my %intact_address_dates = ();
 for my $intact_member (@$intact_addresses) {
     my $case_id        = $intact_member->{SacwisCaseId};
     my $intact_case_id = cycis_id($intact_member);
@@ -423,10 +425,22 @@ for my $intact_member (@$intact_addresses) {
     # adults, children
     if ( $intact_member->{age} >= 18 ) {
         my $adult = row_to_adult($intact_member);
-        $adult->add_address($intact_member);
-        $adults{ $adult->sha } = $adult->transform;
+
+        # possible we have multiple adults with different addresses.
+        # we want the most recent effective date to win.
+        my $address_effective_date
+            = parse_date_ymd( $intact_member->{DT_ADDR_EFF} );
+        if (  !$intact_address_dates{ $adult->id }
+            or $intact_address_dates{ $adult->id }
+            lt $address_effective_date )
+        {
+            # prefer the newer one
+            $intact_address_dates{ $adult->id } = $address_effective_date;
+            $adult->add_address($intact_member);
+            $adults{ $adult->id } = $adult->transform;
+            $found_address++;
+        }
         $adult_count++;
-        $found_address++;
     }
     else {
         my $child = row_to_child($intact_member) or next;
@@ -487,8 +501,28 @@ for my $case_id ( keys %cases ) {
 my @adult_columns = QIC::Adult->meta->column_names;
 for my $adult_id ( keys %adults ) {
     my $rec = $adults{$adult_id};
-    my $adult = QIC::Adult->new( map { $_ => $rec->{$_} } @adult_columns )
-        ->insert_or_update;
+
+  # we changed the 'id' format so load first by client_id/case_id
+  # in case we can find it more easily that way.
+  # otherwise presence of 'id' will fail to find and die on unique constraint.
+    my %attrs = map { $_ => $rec->{$_} } @adult_columns;
+    try {
+        my $adult = QIC::Adult->new(%attrs)->insert_or_update;
+    }
+    catch {
+        my $err = $_;
+        if ( $err
+            =~ /UNIQUE constraint failed: adults.client_id, adults.case_id/ )
+        {
+            delete $attrs{id};
+            my $adult = QIC::Adult->new(%attrs)->insert_or_update;
+            $adult->id($adult_id);
+            $adult->save;
+        }
+        else {
+            die "Caught $err: " . dump $rec;
+        }
+    }
 }
 for my $child_id ( keys %childs ) {
     my $rec   = $childs{$child_id};

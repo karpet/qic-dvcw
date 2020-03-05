@@ -30,6 +30,8 @@ __PACKAGE__->meta->setup(
 
     primary_key_columns => ['id'],
 
+    unique_key => [ 'client_id', 'case_id' ],
+
     foreign_keys => [
         case => {
             class       => 'QIC::Case',
