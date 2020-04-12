@@ -52,6 +52,7 @@ sub parse_date {
 
     my @parts = split( /[\/\-]/, $date );
     if ( grep { length($_) == 4 } @parts ) {
+        $date =~ s,/,-,g;
         return $date;
     }
     if ( $parts[0] > 31 or $parts[0] == 0 ) {

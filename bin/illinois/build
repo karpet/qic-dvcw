@@ -13,7 +13,7 @@ use QIC::CaseWorker;
 use QIC::Adult;
 use QIC::Child;
 use QIC::Utils
-    qw( clean_name clean_state clean_zip parse_date_ymd parse_date_mdy read_json write_json );
+    qw( clean_name clean_state clean_zip parse_date parse_date_ymd parse_date_mdy read_json write_json );
 
 my $DEBUG = $ENV{DEBUG} || 0;
 my $usage = "$0 datadir";
@@ -127,7 +127,7 @@ sub row_to_child {
 
     return Child->new(
         dob =>
-            parse_date_ymd( $row->{"DateOfBirth"} || $row->{"DT_OF_BIRTH"} ),
+            parse_date( $row->{"DateOfBirth"} || $row->{"DT_OF_BIRTH"} ),
         first_name => clean_name( $row->{"FirstName"} || $row->{"NM_FRST"} ),
         last_name  => clean_name( $row->{"LastName"}  || $row->{"NM_LAST"} ),
         id         => $cycis_id,
@@ -146,7 +146,7 @@ sub row_to_adult {
     my $person_id = $row->{"ID_PERS"} || $row->{"id_pers"} || $cycis_id;
 
     return Adult->new(
-        {   dob        => parse_date_ymd( $row->{"DT_OF_BIRTH"} ),
+        {   dob        => parse_date( $row->{"DT_OF_BIRTH"} ),
             case_id    => $case_id,
             last_name  => clean_name( $row->{"NM_LAST"} ),
             first_name => clean_name( $row->{"NM_FRST"} ),
