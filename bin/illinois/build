@@ -498,7 +498,9 @@ for my $case_id ( keys %cases ) {
         case_worker_id => $case_rec->{case_worker_id}
     )->insert_or_update;
 }
+
 my @adult_columns = QIC::Adult->meta->column_names;
+warn "Any errors below about 'DBD::SQLite::st execute failed' can be safely ignored\n";
 for my $adult_id ( keys %adults ) {
     my $rec = $adults{$adult_id};
 
@@ -536,3 +538,4 @@ for my $child_id ( keys %childs ) {
     )->insert_or_update;
 }
 
+warn "Success\n";
