@@ -22,4 +22,7 @@ dump:
 backup:
 	cp qic-prod.db data/backups/qic-`date +%Y%m%d-%H%M%S`-prod.db
 
+csv:
+	perl bin/dump-db-to-csv qic-`date +%Y%m%d-%H%M%S`-db-export
+
 .PHONY: deps

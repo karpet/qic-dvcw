@@ -1,0 +1,28 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use QIC::DB;
+
+my $usage  = "$0 outdir";
+my $out    = shift(@ARGV) or die $usage;
+my @tables = qw(case_workers cases children adults);
+my $dbfile = QIC::DB->db_file;
+my $outdir = Path::Class::Dir->new($out);
+$outdir->mkpath;
+
+for my $table (@tables) {
+    my $to_csv
+        = "sqlite3 -header -csv $dbfile 'select * from $table;' > $outdir/$table.csv";
+    run($to_csv);
+}
+
+run("zip -r $outdir.zip $outdir");
+
+sub run {
+    my $cmd = shift;
+    print $cmd, $/;
+    system($cmd) and die "$cmd failed: $!";
+}
+

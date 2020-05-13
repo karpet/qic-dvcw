@@ -26,6 +26,10 @@ my $sql = Path::Class::File->new( $base_path, 'qic.sql' );
 my $env = $ENV{QIC_ENV} || 'dev';
 my $db = Path::Class::File->new( $base_path, "qic-$env.db" );
 
+sub db_file {
+    return $db;
+}
+
 # create the db if it does not yet exist
 if ( !-s $db ) {
     system("sqlite3 $db < $sql") and die "can't create $db with $sql: $!";
