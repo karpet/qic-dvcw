@@ -10,7 +10,8 @@ use QIC::Case;
 use QIC::CaseWorker;
 use QIC::Adult;
 use QIC::Child;
-use QIC::Utils qw( read_json write_json clean_name parse_date_ymd parse_date_mdy );
+use QIC::Utils
+    qw( read_json write_json clean_name parse_date_ymd parse_date_mdy numerify );
 
 my $usage = "$0 datadir";
 die $usage unless @ARGV;
@@ -55,9 +56,13 @@ my ( %cases, %adults, %childs );
             )
     ] => ( is => 'ro' );
 
+    sub case_id {
+        main::numerify( shift->ENTITY_ID );
+    }
+
     sub id {
         my $self = shift;
-        return join( '-', $self->ENTITY_ID, $self->CL_ID );
+        return join( '-', $self->case_id, main::numerify( $self->CL_ID ) );
     }
 
     sub transform {
@@ -101,7 +106,9 @@ my ( %cases, %adults, %childs );
 
     sub id {
         my $self = shift;
-        return join( '-', $self->ENTITY_ID, $self->CL_ID );
+        return join( '-',
+            main::numerify( $self->ENTITY_ID ),
+            main::numerify( $self->CL_ID ) );
     }
 
     sub transform {
@@ -144,17 +151,20 @@ my ( %cases, %adults, %childs );
     has address => ( is => 'rw', default => sub { Address->new } );
     has contact => ( is => 'rw', default => sub { Contact->new } );
 
-    sub case_id { shift->ENTITY_ID }
+    sub case_id {
+        return main::numerify( shift->ENTITY_ID );
+    }
 
     sub id {
         my $self = shift;
-        return
-            join( '-', $self->ENTITY_ID, $self->CL_ID, $self->INVLV_SEQ_NBR );
+        return main::numerify(
+            join( '-', $self->ENTITY_ID, $self->CL_ID, $self->INVLV_SEQ_NBR )
+        );
     }
 
     sub join_id {
         my $self = shift;
-        return join( '-', $self->ENTITY_ID, $self->CL_ID );
+        return main::numerify( join( '-', $self->ENTITY_ID, $self->CL_ID ) );
     }
 
     sub dob {
@@ -185,8 +195,8 @@ my ( %cases, %adults, %childs );
 
         return {
             id           => $self->join_id,
-            case_id      => $self->ENTITY_ID,
-            client_id    => $self->CL_ID,
+            case_id      => $self->case_id,
+            client_id    => main::numerify( $self->CL_ID ),
             first_name   => main::clean_name( $self->FRST_NME ),
             last_name    => main::clean_name( $self->LST_NME ),
             dob          => $self->dob,
@@ -248,8 +258,7 @@ my ( %cases, %adults, %childs );
     has email => ( is => 'rw', default => sub { $_[0]->default_email } );
 
     sub id {
-        my $self = shift;
-        return $self->CAS_ID;
+        main::numerify( shift->CAS_ID );
     }
 
     sub default_email {

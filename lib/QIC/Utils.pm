@@ -15,7 +15,14 @@ our @EXPORT = qw(
     parse_date_ymd
     parse_date_mdy
     age
+    numerify
 );
+
+sub numerify {
+    my $s = shift;
+    $s =~ s/,//g;
+    return $s;
+}
 
 sub age {
     my $dob = shift;
