@@ -84,6 +84,7 @@ sub parse_date_mdy {
 
     my ( $month, $day, $year2 ) = ( $date =~ m,^(\d+)/(\d+)/(\d+), );
     my $year = $year2 > 22 ? "19$year2" : "20$year2";
+    $year = $year2 if $year2 > 1900;
     $day   = "0$day"   if length($day) == 1;
     $month = "0$month" if length($month) == 1;
     return "$year-$month-$day";

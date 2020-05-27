@@ -10,7 +10,7 @@ use QIC::Case;
 use QIC::CaseWorker;
 use QIC::Adult;
 use QIC::Child;
-use QIC::Utils qw( read_json write_json clean_name parse_date_ymd );
+use QIC::Utils qw( read_json write_json clean_name parse_date_ymd parse_date_mdy );
 
 my $usage = "$0 datadir";
 die $usage unless @ARGV;
@@ -160,6 +160,10 @@ my ( %cases, %adults, %childs );
     sub dob {
         my $self = shift;
         return undef unless $self->BRTH_DT;
+
+        if ( $self->BRTH_DT =~ m/^\d\d\D/ ) {
+            return main::parse_date_mdy( $self->BRTH_DT );
+        }
 
         return main::parse_date_ymd( $self->BRTH_DT );
     }
