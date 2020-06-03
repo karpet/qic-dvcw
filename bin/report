@@ -26,7 +26,8 @@ use QIC::Case;
 
 my $CONFIG = Config::YAML->new( config => "$FindBin::Bin/../config.yml" );
 
-GetOptions( $CONFIG, 'help', 'sitename=s', 'dry_run', 'replacements=s' )
+GetOptions( $CONFIG, 'help', 'sitename=s', 'dry_run', 'replacements=s',
+    'caseworkers=s' )
     or pod2usage(2);
 
 #dump $CONFIG;
@@ -60,6 +61,13 @@ my %safelist_caseworkers = ();
 for my $line (@$REPLACEMENTS) {
     my $email = $line->{email};
     $safelist_caseworkers{$email}++;
+}
+
+if ( $CONFIG->{caseworkers} ) {
+    for my $line ( read_lines( $CONFIG->{caseworkers} ) ) {
+        chomp $line;
+        $safelist_caseworkers{$line}++;
+    }
 }
 
 my $CSV_HEADER = [
@@ -217,7 +225,8 @@ CASE: for my $case (@$cases) {
                 next if $r->{email} ne $worker->email;
                 warn dump $r;
                 next
-                    if $seen_replacement{ $r->{email} }->{ $r->{survey_number} }++;
+                    if $seen_replacement{ $r->{email} }
+                    ->{ $r->{survey_number} }++;
                 $survey_name = $r->{survey_number};
                 $survey_name =~ s/R//;
                 last;
