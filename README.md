@@ -340,6 +340,7 @@ In this example, we start with a data/mass/mass-replacement-2020-02-14.csv file 
   * `CAS_INV_IPV_HISTORY_*` -> `history.csv`
   * `CAS_INV_IPV_HISTORY_CLIENTS_*` -> `clients.csv`
   * `CAS_INV_MOSTRECENTCONTACTS_*` -> `recent-contacts.csv`
+* remove any leading BOM bytes from the file conversion: `debom *csv`
 * convert each .csv file to .json format. Example: `csv2json contacts.csv > contacts.json`
   * NOTE if there are encoding problems with bad UTF-8, diagnose with `utf8check clients.csv` and hand-edit. Can often be avoided if saved as Windows CSV.
 * copy the master dataset .xlsx with all case worker emails to the new folder
@@ -362,6 +363,7 @@ In this example, we start with a data/mass/mass-replacement-2020-02-14.csv file 
   * `MA List of current caseworkers.xlsx` => `case-workers.csv`
   * `Consumer Level Detail` => `clients.csv`
   * `Case Level Details` => `cases.csv`
+* remove any leading BOM bytes from the file conversion: `debom *csv`
 * convert each .csv file to .json format. Example: `csv2json cases.csv > cases.json`
 * copy the master dataset .xlsx with all case worker emails to the new folder
 * open the master dataset .xlsx and save Main worksheet as `mass-caseworker-emails.csv`
@@ -383,6 +385,7 @@ In this example, we start with a data/mass/mass-replacement-2020-02-14.csv file 
   * `intact-members-address.csv`
   * `placement-address.csv`
   * `placement-cases.csv`
+* remove any leading BOM bytes from the file conversion: `debom *csv`
 * convert each .csv file to .json format. Example: `csv2json intact-cases.csv > intact-cases.json`
 * copy the master dataset .xlsx with all caseworker emails to the new folder. Example name `IL Master Dataset 01.01.20.xlsx`.
 * open the master dataset .xlsx and save Main worksheet as .csv

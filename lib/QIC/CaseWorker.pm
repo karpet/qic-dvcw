@@ -52,6 +52,11 @@ sub replaced_cases {
     return $self->find_cases( query => [ '!replaced_at' => undef, ] );
 }
 
+sub closed_cases {
+    my $self = shift;
+    return $self->find_cases( query => [ '!closed_at' => undef, ] );
+}
+
 sub number_of_surveyed_cases {
     my $self = shift;
     return scalar( @{ $self->surveyed_cases } );
@@ -60,6 +65,11 @@ sub number_of_surveyed_cases {
 sub number_of_replaced_cases {
     my $self = shift;
     return scalar( @{ $self->replaced_cases } );
+}
+
+sub number_of_closed_cases {
+    my $self = shift;
+    return scalar( @{ $self->closed_cases } );
 }
 
 sub eligible_cases {

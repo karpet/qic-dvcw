@@ -255,6 +255,8 @@ for my $cwe (@$caseworker_emails) {
     $email_lookup{$key} = $cwe->{email};
 }
 
+warn dump(\%email_lookup) if $DEBUG;
+
 my %address_lookup = ();    # case_id => [ addresses ]
 my $address_count  = 0;
 for my $addr (@$placement_addresses) {

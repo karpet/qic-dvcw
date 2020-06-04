@@ -136,7 +136,7 @@ else {
     );
 }
 
-printf "Found %s case workers with unsurveyed cases\n", scalar(@$workers);
+printf "Found %s case workers with open unsurveyed cases\n", scalar(@$workers);
 
 if ( !$CONFIG->{dry_run} ) {
 
@@ -160,15 +160,14 @@ WORKER: for my $worker (@$workers) {
     my $is_replacement = exists $safelist_caseworkers{ $worker->email };
     my $use_random_cases = $is_replacement || ( $cases_per_worker > -1 );
 
-    if ($is_replacement) {
-        printf(
-            "Worker %s, has %s total cases, %s surveyed, %s replaced\n",
-            $worker->id,
-            $worker->has_related('cases'),
-            $worker->number_of_surveyed_cases,
-            $worker->number_of_replaced_cases,
-        );
-    }
+    printf(
+        "Worker %s, has %s total cases, %s surveyed, %s replaced, %s closed\n",
+        $worker->id,
+        $worker->has_related('cases'),
+        $worker->number_of_surveyed_cases,
+        $worker->number_of_replaced_cases,
+        $worker->number_of_closed_cases,
+    );
 
     next WORKER unless $worker->has_related('cases');
 
@@ -177,10 +176,8 @@ WORKER: for my $worker (@$workers) {
         ? $worker->random_cases($cases_per_worker)
         : $worker->eligible_cases;
 
-    if ($is_replacement) {
-        printf( "Worker %s, fetched %s new cases\n",
-            $worker->id, scalar(@$cases) );
-    }
+    printf( "Worker %s, fetched %s new cases\n",
+        $worker->id, scalar(@$cases) );
 
 #printf "found %s eligible cases for worker %s\n", scalar(@{ $worker->eligible_cases }), $worker->id;
 
