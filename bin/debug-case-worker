@@ -29,3 +29,10 @@ for my $case (@eligible) {
     printf( "%s\n", dump( $case->flatten ) );
 }
 
+my @unsurveyed = @{ $worker->unsurveyed_open_cases };
+
+printf "%s unsurveyed open cases\n", scalar(@unsurveyed);
+
+for my $case (@unsurveyed) {
+    printf( "%s\n", dump( $case->flatten ) );
+}

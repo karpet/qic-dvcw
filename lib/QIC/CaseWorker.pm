@@ -47,6 +47,12 @@ sub surveyed_cases {
     return $self->find_cases( query => [ '!surveyed_at' => undef, ] );
 }
 
+sub unsurveyed_open_cases {
+    my $self = shift;
+    return $self->find_cases(
+        query => [ 'surveyed_at' => undef, 'closed_at' => undef ] );
+}
+
 sub replaced_cases {
     my $self = shift;
     return $self->find_cases( query => [ '!replaced_at' => undef, ] );
