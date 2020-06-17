@@ -11,7 +11,7 @@ use QIC::CaseWorker;
 use QIC::Adult;
 use QIC::Child;
 use QIC::Utils
-    qw( clean_name clean_phone clean_state clean_zip parse_date_ymd read_json write_json );
+    qw( clean_name clean_phone clean_state clean_zip parse_date read_json write_json );
 
 my $usage = "$0 datadir";
 die $usage unless @ARGV;
@@ -117,7 +117,7 @@ sub consumer_to_client {
     my $consumer = shift;
     return Client->new(
         {   sex => $consumer->{"Birth Sex"},
-            dob => parse_date_ymd(
+            dob => parse_date(
                 $consumer->{"Birthdate"} || $consumer->{"Birthdate "}
             ),    # extra space in header
             case_id     => $consumer->{"QIC Unique Case ID"},
@@ -146,7 +146,7 @@ sub case_to_case {
     return Case->new(
         {   id             => $case->{"QIC Case ID"},
             case_worker_id => $case->{"QIC Employee ID"},
-            closed         => parse_date_ymd( $case->{"Case Close Date"} ),
+            closed         => parse_date( $case->{"Case Close Date"} ),
         }
     );
 }
