@@ -359,8 +359,10 @@ for my $case_hash (@$history) {
     my $case = Case->new($case_hash);
 
     # skip nonsense
-    next unless $case->id;
-    next unless $case->CASEWORKER_NAME;
+    unless ( $case->id and $case->CASEWORKER_NAME ) {
+        warn "Skipping case " . dump($case);
+        next;
+    }
 
     # count processed (we will skip some that don't have emails)
     $case_count++;
@@ -375,6 +377,8 @@ for my $case_hash (@$history) {
     $cases{ $case->id } = $case->transform;
 }
 
+#warn dump \%cases;
+
 # build adults and children
 my $adult_count = 0;
 my $child_count = 0;
@@ -386,8 +390,17 @@ for my $client_hash (@$clients) {
     my $client = Client->new($client_hash);
 
     next unless $client->id;
-    next if $client->skip;
-    next unless $cases{ $client->case_id };
+
+    if ( $client->skip ) {
+        warn "Skipping " . dump($client);
+        next;
+    }
+
+    unless ( $cases{ $client->case_id } ) {
+
+#warn sprintf("Failed to find client with case id %s in cases hash", $client->case_id);
+        next;
+    }
 
     if (    $client->CHILD_SW
         and $client->CHILD_SW eq 'Y'
