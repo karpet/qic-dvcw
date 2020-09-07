@@ -145,11 +145,13 @@ sub row_to_adult {
     my $cycis_id  = cycis_id($row);
     my $person_id = $row->{"ID_PERS"} || $row->{"id_pers"} || $cycis_id;
 
+    return unless $case_id;
+
     return Adult->new(
-        {   dob        => parse_date( $row->{"DT_OF_BIRTH"} ),
+        {   dob        => parse_date( $row->{"DT_OF_BIRTH"} || $row->{"DateOfBirth"} ),
             case_id    => $case_id,
-            last_name  => clean_name( $row->{"NM_LAST"} ),
-            first_name => clean_name( $row->{"NM_FRST"} ),
+            last_name  => clean_name( $row->{"NM_LAST"} || $row->{"LastName"} ),
+            first_name => clean_name( $row->{"NM_FRST"} || $row->{"FirstName"} ),
             id         => join( '-', $cycis_id, $person_id ),
             client_id  => join( '-', $case_id, $person_id ),
             role => "Adult",    # TODO missing data
@@ -332,6 +334,10 @@ for my $case_hash (@$placement_cases) {
             . dump( diff( $seen_adults{ $adult->id }, $case_hash ) );
     }
     $seen_adults{ $adult->id } = $case_hash;
+
+    if (!$adult->first_name) {
+        warn dump $adult;
+    }
 
     my $address = find_address_for_case_id_and_name(
         $adult->first_name, $adult->last_name,
