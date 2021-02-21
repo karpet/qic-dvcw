@@ -54,6 +54,9 @@ my ( %cases, %case_workers, %adults, %childs );
     has [
         qw(
             sex
+            gender
+            race
+            ethnicity
             role
             dob
             case_id
@@ -116,8 +119,11 @@ sub determine_role {
 sub consumer_to_client {
     my $consumer = shift;
     return Client->new(
-        {   sex => $consumer->{"Birth Sex"},
-            dob => parse_date(
+        {   sex       => $consumer->{"Birth Sex"},
+            gender    => $consumer->{"Gender Identity"},
+            race      => $consumer->{"Race Code"},
+            ethnicity => $consumer->{"Ethnicity Code"},
+            dob       => parse_date(
                 $consumer->{"Birthdate"} || $consumer->{"Birthdate "}
             ),    # extra space in header
             case_id     => $consumer->{"QIC Unique Case ID"},
@@ -321,7 +327,11 @@ for my $child_id ( keys %childs ) {
         case_id    => $rec->{case_id},
         first_name => $rec->{first_name},
         last_name  => $rec->{last_name},
-        dob        => $rec->{dob}
+        dob        => $rec->{dob},
+        sex        => $rec->{sex},
+        gender     => $rec->{gender},
+        race       => $rec->{race},
+        ethnicity  => $rec->{ethnicity},
     )->insert_or_update;
 }
 

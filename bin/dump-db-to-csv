@@ -18,7 +18,7 @@ for my $table (@tables) {
     run($to_csv);
 }
 
-run("zip -r $outdir.zip $outdir");
+run("zip -er $outdir.zip $outdir");
 
 sub run {
     my $cmd = shift;

@@ -142,6 +142,8 @@ my ( %cases, %adults, %childs );
             FRST_NME
             ENTITY_ID
             SEX
+            RACE_GROUP
+            CLIENT_ALL_RACES
             MIDD_NME
             BRTH_DT
             CHILD_SW
@@ -202,6 +204,8 @@ my ( %cases, %adults, %childs );
             dob          => $self->dob,
             role         => $self->CYF_ROLE,
             sex          => $self->SEX,
+            ethnicity    => $self->CLIENT_ALL_RACES,
+            race         => $self->RACE_GROUP,
             address_one  => $addr_hash->{address_one},
             address_two  => $addr_hash->{address_two},
             city         => $addr_hash->{city},
@@ -494,7 +498,10 @@ for my $child_id ( keys %childs ) {
         case_id    => $rec->{case_id},
         first_name => $rec->{first_name},
         last_name  => $rec->{last_name},
-        dob        => $rec->{dob}
+        dob        => $rec->{dob},
+        sex        => $rec->{sex},
+        ethnicity  => $rec->{ethnicity},
+        race       => $rec->{race},
     )->insert_or_update;
 }
 

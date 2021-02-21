@@ -44,6 +44,9 @@ my $DATA = shift(@ARGV);
     has [
         qw(
             sex
+            gender
+            race
+            ethnicity
             role
             dob
             case_id
@@ -76,6 +79,22 @@ my $DATA = shift(@ARGV);
         $self->{state}       = main::clean_state( $addr->{CD_ST} );
         $self->{city}        = main::clean_name( $addr->{AD_CITY} );
     }
+
+    sub add_ethnographics {
+        my ( $self, $addr ) = @_;
+        return if $self->race or $self->ethnicity;
+
+        $self->{race}
+            = main::race_lookup( $addr->{"Race"} || $addr->{"race"} );
+        $self->{ethnicity}
+            = main::ethnicity_lookup( $addr->{"Ethnic"}
+                || $addr->{"CDETHNC"} );
+    }
+
+    sub age {
+        my $self = shift;
+        return QIC::Utils::age( $self->{dob} );
+    }
 }
 
 {
@@ -92,6 +111,10 @@ my $DATA = shift(@ARGV);
             first_name
             last_name
             dob
+            sex
+            gender
+            race
+            ethnicity
             id)
     ] => ( is => 'ro' );
 
@@ -126,15 +149,57 @@ sub row_to_child {
     return unless $case_id;
 
     return Child->new(
-        dob =>
-            parse_date( $row->{"DateOfBirth"} || $row->{"DT_OF_BIRTH"} ),
+        dob => parse_date( $row->{"DateOfBirth"} || $row->{"DT_OF_BIRTH"} ),
+        gender     => $row->{"Child Gender"},
+        race       => $row->{"PrimaryRace"},
+        ethnicity  => $row->{"Ethnicity"},
         first_name => clean_name( $row->{"FirstName"} || $row->{"NM_FRST"} ),
-        last_name  => clean_name( $row->{"LastName"}  || $row->{"NM_LAST"} ),
+        last_name  => clean_name( $row->{"LastName"} || $row->{"NM_LAST"} ),
         id         => $cycis_id,
         case_id    => $case_id,
         client_id =>
             join( '-', $case_id, ( $row->{"Person ID"} || $cycis_id ) ),
     );
+}
+
+my %race_codes = (
+    1 => "Native American / Alaska Native",
+    2 => "Asian",
+    3 => "Black / African American",
+    4 => "Native Hawaiian / Other Pacific Islander",
+    5 => "White",
+    6 => "Not Reported",
+    7 => "Declined to Identify",
+    8 => "Could not be verified",
+    9 => "Unknown",
+);
+
+my %ethnicity_codes = (
+    1  => "Not Hispanic",
+    2  => "Hispanic South American",
+    3  => "Hispanic Cuban",
+    4  => "Hispanic Mexican",
+    5  => "Hispanic Puerto Rican",
+    6  => "Hispanic Spanish Descent",
+    7  => "Not Reported",
+    8  => "Hispanic Other",
+    9  => "Hispanic Dominican",
+    10 => "Hispanic Central American",
+    11 => "Declined to Identify",
+    12 => "Could not be verified",
+    13 => "Unknown",
+);
+
+sub race_lookup {
+    my $code = shift;
+    return undef unless $code;
+    return $race_codes{"$code"} || $code;
+}
+
+sub ethnicity_lookup {
+    my $code = shift;
+    return undef unless $code;
+    return $ethnicity_codes{"$code"} || $code;
 }
 
 # SACWISCaseId -> SACWIS ID
@@ -148,12 +213,18 @@ sub row_to_adult {
     return unless $case_id;
 
     return Adult->new(
-        {   dob        => parse_date( $row->{"DT_OF_BIRTH"} || $row->{"DateOfBirth"} ),
-            case_id    => $case_id,
-            last_name  => clean_name( $row->{"NM_LAST"} || $row->{"LastName"} ),
-            first_name => clean_name( $row->{"NM_FRST"} || $row->{"FirstName"} ),
-            id         => join( '-', $cycis_id, $person_id ),
-            client_id  => join( '-', $case_id, $person_id ),
+        {   dob =>
+                parse_date( $row->{"DT_OF_BIRTH"} || $row->{"DateOfBirth"} ),
+            race => race_lookup( $row->{"Race"} || $row->{"race"} ),
+            ethnicity =>
+                ethnicity_lookup( $row->{"Ethnic"} || $row->{"CDETHNC"} ),
+            case_id => $case_id,
+            last_name =>
+                clean_name( $row->{"NM_LAST"} || $row->{"LastName"} ),
+            first_name =>
+                clean_name( $row->{"NM_FRST"} || $row->{"FirstName"} ),
+            id        => join( '-', $cycis_id, $person_id ),
+            client_id => join( '-', $case_id,  $person_id ),
             role => "Adult",    # TODO missing data
             state => clean_state( $row->{"State"} || $row->{CD_ST} ),
             sha   => sha256_hex( dump($row) ),
@@ -202,7 +273,7 @@ sub cycis_id {
     return $r->{ID_CYCIS_CASE} || $r->{"CYCIS ID"} || $r->{CYCISCaseId};
 }
 
-# each row is an adult on a case
+# each row is a child on a case, though there is adult info
 my $placement_cases_file = "$DATA/placement-cases.json";
 
 # each row is a case
@@ -252,12 +323,13 @@ for my $pc (@$placement_cases) {
 my %email_lookup = ();
 for my $cwe (@$caseworker_emails) {
     next unless $cwe->{last_name};
+    next unless $cwe->{status};
     next unless $cwe->{status} eq "1 - active";
     my $key = lc( $cwe->{last_name} . '-' . $cwe->{first_name} );
     $email_lookup{$key} = $cwe->{email};
 }
 
-warn dump(\%email_lookup) if $DEBUG;
+warn dump( \%email_lookup ) if $DEBUG;
 
 my %address_lookup = ();    # case_id => [ addresses ]
 my $address_count  = 0;
@@ -335,7 +407,7 @@ for my $case_hash (@$placement_cases) {
     }
     $seen_adults{ $adult->id } = $case_hash;
 
-    if (!$adult->first_name) {
+    if ( !$adult->first_name ) {
         warn dump $adult;
     }
 
@@ -343,8 +415,11 @@ for my $case_hash (@$placement_cases) {
         $adult->first_name, $adult->last_name,
         $cycis_id,          \%address_lookup
     );
-    $adult->add_address($address) if $address;
-    $found_address++ if $address;
+    if ($address) {
+        $adult->add_ethnographics($address);
+        $adult->add_address($address);
+        $found_address++;
+    }
 
     if ( $adult_emails{ $adult->id } ) {
         my $r = $adult_emails{ $adult->id };
@@ -355,11 +430,32 @@ for my $case_hash (@$placement_cases) {
         }
     }
 
-    $adults{ $adult->id } = $adult->transform;
-    $adult_count++;
+    if (    $adult->dob eq $child->dob
+        and $adult->first_name eq $child->first_name )
+    {
+        warn "Could not locate unique adult in "
+            . main::dump( [ $adult, $child ] ) . " "
+            . main::dump($case_hash);
+        # not "next" because we do want to capture $child
+    }
+
+    # year 9999 seems to indicate an invalid dob in IL data
+    elsif ( $adult->age < 19 and $adult->dob !~ /9999/ ) {
+        warn "Found child with role=Adult "
+            . main::dump( [ $adult, $child ] ) . " "
+            . main::dump($case_hash);
+        next;
+    }
+    else {
+
+        $adults{ $adult->id }
+            = { %{ $adult->transform }, file => 'placement_cases' };
+        $adult_count++;
+    }
 
     # child
-    $childs{ $child->id } = $child->transform;
+    $childs{ $child->id }
+        = { %{ $child->transform }, file => 'placement_cases' };
 }
 
 printf(
@@ -445,14 +541,16 @@ for my $intact_member (@$intact_addresses) {
             # prefer the newer one
             $intact_address_dates{ $adult->id } = $address_effective_date;
             $adult->add_address($intact_member);
-            $adults{ $adult->id } = $adult->transform;
+            $adults{ $adult->id }
+                = { %{ $adult->transform }, file => 'intact_addresses' };
             $found_address++;
         }
         $adult_count++;
     }
     else {
         my $child = row_to_child($intact_member) or next;
-        $childs{ $child->id } = $child->transform;
+        $childs{ $child->id }
+            = { %{ $child->transform }, file => 'intact_addresses' };
     }
 }
 
@@ -484,6 +582,8 @@ printf
     $case_worker_email_count,
     scalar( keys %case_workers );
 
+#exit;
+
 # write to db
 QIC::DB->backup;
 
@@ -508,7 +608,8 @@ for my $case_id ( keys %cases ) {
 }
 
 my @adult_columns = QIC::Adult->meta->column_names;
-warn "Any errors below about 'DBD::SQLite::st execute failed' can be safely ignored\n";
+warn
+    "Any errors below about 'DBD::SQLite::st execute failed' can be safely ignored\n";
 for my $adult_id ( keys %adults ) {
     my $rec = $adults{$adult_id};
 
