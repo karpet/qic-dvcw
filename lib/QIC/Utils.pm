@@ -16,6 +16,7 @@ our @EXPORT = qw(
     parse_date_mdy
     age
     numerify
+    trim
 );
 
 sub numerify {
@@ -52,6 +53,10 @@ sub clean_phone {
     $p = clean_name($p);
     $p =~ s,[^\d\-\.\ ]+,,g;
     return $p;
+}
+
+sub trim {
+    $_[0] =~ s/^\s+|\s+$//g;
 }
 
 sub parse_date {
