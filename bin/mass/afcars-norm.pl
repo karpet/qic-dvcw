@@ -87,7 +87,7 @@ my %MAP = (
     "E56_FC_DISCHARGE_DATE"          => "DoDFCDt",
     "E57_FC_DISCHARGE_TS"            => "DoDTrnDt",
     "E58_FC_DISCHARGE_REASON"        => "DISREASN",
-    "E59_TITLE_IVE_FC"               => "IVERC",
+    "E59_TITLE_IVE_FC"               => "IVEFC",
     "E60_TITLE_IVE_ADOP"             => "IVEAA",
     "E61_TITLE_IVA"                  => "IVAAFDC",
     "E62_TITLE_IVD"                  => "IVDCHSUP",
@@ -108,6 +108,7 @@ sub norm_rec {
         next if $k eq "E02_RPT_PERIOD_END_DATE";
         if ( !exists $MAP{$k} ) {
             warn "$file: Key $k not in MAP" unless $warned{$file}->{$k}++;
+            $normed->{$k} = $rec->{$k};
             next;
         }
         $normed->{ $MAP{$k} } = $rec->{$k};

@@ -87,7 +87,7 @@ my %MAP = (
     "E56DischDate"          => "DoDFCDt",
     "E57DischTransDate"     => "DoDTrnDt",
     "E58DischReasonCode"    => "DISREASN",
-    "E59TIVEFC"             => "IVERC",
+    "E59TIVEFC"             => "IVEFC",
     "E60TIVEAA"             => "IVEAA",
     "E61TIVAAFDC"           => "IVAAFDC",
     "E62TIVDChldSupp"       => "IVDCHSUP",
@@ -109,6 +109,7 @@ sub norm_rec {
         next if $k eq "ADP2RptDateCCYYMM";
         if ( !exists $MAP{$k} ) {
             warn "$file: Key $k not in MAP" unless $warned{$file}->{$k}++;
+            $normed->{$k} = $rec->{$k};
             next;
         }
         $normed->{ $MAP{$k} } = $rec->{$k};
