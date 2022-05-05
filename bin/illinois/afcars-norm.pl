@@ -7,10 +7,10 @@ use Text::CSV_XS qw( csv );
 use File::Slurper qw( read_lines );
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
-use QIC::Utils qw( parse_date parse_date_ymd parse_date_mdy read_json trim );
+use QIC::Utils qw( read_json trim );
 
 # AFCARS col heads
-my @CSV_HEADER = read_lines("$FindBin::Bin/../../afcars-vars.txt");
+my @CSV_HEADER = read_lines("$FindBin::Bin/../../eval/afcars-vars.txt");
 
 # dump \@CSV_HEADER;
 

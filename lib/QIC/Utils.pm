@@ -14,6 +14,7 @@ our @EXPORT = qw(
     parse_date
     parse_date_ymd
     parse_date_mdy
+    parse_date_iso
     age
     numerify
     trim
@@ -100,6 +101,14 @@ sub parse_date_mdy {
     $day   = "0$day"   if length($day) == 1;
     $month = "0$month" if length($month) == 1;
     return "$year-$month-$day";
+}
+
+sub parse_date_iso {
+    my $date = shift or return undef;
+    if ($date =~ m/^(\d\d\d\d)(\d\d)(\d\d)$/) {
+        return "$1-$2-$3";
+    }
+    return parse_date($date);
 }
 
 sub clean_zip {

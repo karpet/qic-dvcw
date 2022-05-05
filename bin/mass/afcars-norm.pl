@@ -7,10 +7,10 @@ use Text::CSV_XS qw( csv );
 use File::Slurper qw( read_lines );
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
-use QIC::Utils qw( parse_date parse_date_ymd parse_date_mdy read_json trim );
+use QIC::Utils qw( parse_date_iso read_json trim );
 
 # AFCARS col heads
-my @CSV_HEADER = read_lines("$FindBin::Bin/../../afcars-vars.txt");
+my @CSV_HEADER = read_lines("$FindBin::Bin/../../eval/afcars-vars.txt");
 
 # dump \@CSV_HEADER;
 
@@ -100,6 +100,117 @@ my %MAP = (
 # warn just once per file
 my %warned = ();
 
+my @yes_no_unable = qw(
+    HisOrgin
+    ClinDis
+    EverAdpt
+    PlaceOut
+    HOFCCTK1
+    HOFCCTK2
+);
+
+my %age_adopt = (
+    ""                        => "",
+    "not applicable"          => 0,
+    "less then two years old" => 1,    # sic then
+    "2 to 5 years old"        => 2,
+    "6 to 12 years old"       => 3,
+    "13 years old or older"   => 4,
+    "unable to determine"     => 5,
+);
+
+my @dates = qw(
+    DOB
+    PedRevDt
+    Rem1Dt
+    DLstFCDt
+    LatRemDt
+    RemTrnDt
+    CurSetDt
+    TPRMomDt
+    TPRDadDt
+    DoDFCDt
+    DoDTrnDt
+);
+
+my %removal_manner = (
+    ""                   => "",
+    "voluntary"          => 1,
+    "court ordered"      => 2,
+    "not yet determined" => 3,
+);
+
+my %current_placement = (
+    ""                                => "",
+    "pre-adoptive home"               => 1,
+    "foster family home relative"     => 2,
+    "foster family home non-relative" => 3,
+    "group home"                      => 4,
+    "institution"                     => 5,
+    "supervised independent living"   => 6,
+    "runaway"                         => 7,
+    "trial home visit"                => 8,
+);
+
+my %case_goal = (
+    ""                                            => "",
+    "runify with parents or principal caretakers" => 1,    # sic runify
+    "living with other relatives"                 => 2,
+    "live with other relatives"                   => 2,
+    "adoption"                                    => 3,
+    "long term foster care"                       => 4,
+    "emancipation"                                => 5,
+    "guardianship"                                => 6,
+    "case plan goal not yet established"          => 7,
+);
+
+my %caretaker = (
+    ""                    => 5,
+    "married couple"      => 1,
+    "unmarried couple"    => 2,
+    "single female"       => 3,
+    "single male"         => 4,
+    "unable to determine" => 5,
+);
+
+my %foster_family = (
+    ""                 => 0,
+    "not applicable"   => 0,
+    "married couple"   => 1,
+    "unmarried couple" => 2,
+    "single female"    => 3,
+    "single male"      => 4,
+);
+
+my %yes_no = (
+    ""    => "",
+    "0"   => 0,
+    "1"   => 1,
+    "no"  => 0,
+    "yes" => 1,
+);
+
+my %discharge = (
+    "not applicable"                                   => 0,
+    "reunification with parents or primary caretakers" => 1,
+    "living with other relatives"                      => 2,
+    "adoption"                                         => 3,
+    "emancipation"                                     => 4,
+    "guardianship"                                     => 5,
+    "transfer to another agency"                       => 6,
+    "runaway"                                          => 7,
+    "death of child"                                   => 8,
+);
+
+sub remap {
+    my ( $rec, $field, $map ) = @_;
+    if ( !exists $map->{ lc( $rec->{$field} ) } ) {
+        warn "No mapping for $field => $rec->{$field} in map";
+        return;
+    }
+    $rec->{$field} = $map->{ lc( $rec->{$field} ) };
+}
+
 sub norm_rec {
     my ( $file, $rec ) = @_;
 
@@ -118,31 +229,44 @@ sub norm_rec {
     $normed->{RepDatMo} = $rep_month;
     $normed->{RepDatYr} = $rep_year;
 
-    # TODO derive these?
-    # FY
-    # LatRemLOS
-    # SettingLOS
-    # PreviousLOS
-    # LifeLOS
-    # AgeAtStart
-    # AgeAtLatRem
-    # AgeAtEnd
-    # InAtStart
-    # InAtEnd
-    # Entered
-    # Exited
-    # Served
-    # IsWaiting
-    # IsTPR
-    # AgedOut
-    # RaceEthn
-    # Race
-    # RU13
-    # StFCID
-
     for my $k ( keys %$normed ) {
         trim( $normed->{$k} );
+        next unless defined $normed->{$k};
+        if ( lc( $normed->{$k} ) =~ m/does not apply$/ ) {
+            $normed->{$k} = 0;
+        }
+        elsif ( lc( $normed->{$k} ) =~ m/applies$/ ) {
+            $normed->{$k} = 1;
+        }
     }
+    if ( $normed->{Sex} eq "Male" )   { $normed->{Sex} = 1 }
+    if ( $normed->{Sex} eq "Female" ) { $normed->{Sex} = 2 }
+
+    for my $f (@yes_no_unable) {
+        if ( lc( $normed->{$f} ) eq "not applicable" ) { $normed->{$f} = 0 }
+        if ( lc( $normed->{$f} ) eq "yes" )            { $normed->{$f} = 1 }
+        if ( lc( $normed->{$f} ) eq "no" )             { $normed->{$f} = 2 }
+        if ( lc( $normed->{$f} ) eq "unable to determine" ) {
+            $normed->{$f} = 3;
+        }
+        if ( lc( $normed->{$f} ) eq "not yet determined" ) {
+            $normed->{$f} = 3;
+        }
+    }
+
+    remap( $normed, "AgeAdopt", \%age_adopt );
+
+    for my $f (@dates) {
+        $normed->{$f} = parse_date_iso( $normed->{$f} );
+    }
+
+    remap( $normed, "ManRem",   \%removal_manner );
+    remap( $normed, "CurPlSet", \%current_placement );
+    remap( $normed, "CaseGoal", \%case_goal );
+    remap( $normed, "CtkFamSt", \%caretaker );
+    remap( $normed, "FosFamSt", \%foster_family );
+    remap( $normed, "RF1UTOD",  \%yes_no );
+    remap( $normed, "DISREASN", \%discharge );
 
     return $normed;
 }
