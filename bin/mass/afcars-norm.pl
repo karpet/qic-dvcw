@@ -246,12 +246,7 @@ sub norm_rec {
         if ( lc( $normed->{$f} ) eq "not applicable" ) { $normed->{$f} = 0 }
         if ( lc( $normed->{$f} ) eq "yes" )            { $normed->{$f} = 1 }
         if ( lc( $normed->{$f} ) eq "no" )             { $normed->{$f} = 2 }
-        if ( lc( $normed->{$f} ) eq "unable to determine" ) {
-            $normed->{$f} = 3;
-        }
-        if ( lc( $normed->{$f} ) eq "not yet determined" ) {
-            $normed->{$f} = 3;
-        }
+        if ( lc( $normed->{$f} ) =~ /determine/ )      { $normed->{$f} = 3 }
     }
 
     remap( $normed, "AgeAdopt", \%age_adopt );
