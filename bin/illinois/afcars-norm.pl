@@ -7,7 +7,7 @@ use Text::CSV_XS qw( csv );
 use File::Slurper qw( read_lines );
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
-use QIC::Utils qw( read_json trim );
+use QIC::Utils qw( parse_date_iso read_json trim );
 
 # AFCARS col heads
 my @CSV_HEADER = read_lines("$FindBin::Bin/../../eval/afcars-vars.txt");
@@ -100,6 +100,20 @@ my %MAP = (
 # warn just once per file
 my %warned = ();
 
+my @dates = qw(
+    DOB
+    PedRevDt
+    Rem1Dt
+    DLstFCDt
+    LatRemDt
+    RemTrnDt
+    CurSetDt
+    TPRMomDt
+    TPRDadDt
+    DoDFCDt
+    DoDTrnDt
+);
+
 sub norm_rec {
     my ( $file, $rec ) = @_;
 
@@ -127,30 +141,12 @@ sub norm_rec {
         $normed->{RepDatYr} = $rep_year;
     }
 
-    # TODO derive these?
-    # FY
-    # LatRemLOS
-    # SettingLOS
-    # PreviousLOS
-    # LifeLOS
-    # AgeAtStart
-    # AgeAtLatRem
-    # AgeAtEnd
-    # InAtStart
-    # InAtEnd
-    # Entered
-    # Exited
-    # Served
-    # IsWaiting
-    # IsTPR
-    # AgedOut
-    # RaceEthn
-    # Race
-    # RU13
-    # StFCID
-
     for my $k ( keys %$normed ) {
         trim( $normed->{$k} );
+    }
+
+    for my $f (@dates) {
+        $normed->{$f} = parse_date_iso( $normed->{$f} );
     }
 
     return $normed;

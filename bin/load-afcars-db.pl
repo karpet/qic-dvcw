@@ -80,7 +80,6 @@ my @EPISODE_FIELDS = qw(
     CTK2YR
     TPRMomDt
     TPRDadDt
-    TPRDate
     FosFamSt
     FCCTK1YR
     FCCTK2YR
