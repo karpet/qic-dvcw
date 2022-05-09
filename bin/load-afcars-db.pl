@@ -50,6 +50,15 @@ my @CHILD_FIELDS = qw(
 my @EPISODE_FIELDS = qw(
     FIPSCode
     PedRevDt
+    ClinDis
+    MR
+    VisHear
+    PhyDis
+    EmotDist
+    OtherMed
+    EverAdpt
+    AgeAdopt
+    Rem1Dt
     TotalRem
     DLstFCDt
     LatRemDt
@@ -145,6 +154,7 @@ for my $csv_file (@ARGV) {
         my $child = get_child($row);
         next unless $child;
         my $episode = get_episode($row);
+        $episode->{filename} = $csv_file;
         $children->insert($child) unless $child_ids{ $child->{id} }++;
         $episodes->insert($episode);
     }
