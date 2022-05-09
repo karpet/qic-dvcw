@@ -48,6 +48,8 @@ my @CHILD_FIELDS = qw(
 );
 
 my @EPISODE_FIELDS = qw(
+    RepDatMo
+    RepDatYr
     FIPSCode
     PedRevDt
     ClinDis
