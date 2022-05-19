@@ -1,0 +1,154 @@
+num,title,name,label
+#1,Submission Year,SubYr,Submission Year
+#2,State or Territory,StaTerr,State or Territory
+#3,Report ID,RptID,Report Identifier (encrypted)
+#4,Child ID,ChID,Child Identifier (encrypted)
+#5,State/County FIPS Code,RptFIPS,State and County FIPS Code
+#6,Report Date,RptDt,Report Date
+#7,Report Time,RptTm,Report Time
+#8,Investigation Start Date,InvDate,Investigation Start Date
+#9,Investigation Start Time,InvStrTm,Investigation Start Time
+#10,Report Source,RptSrc,Report Source
+#11,Report Disposition,RptDisp,Report Disposition
+#12,Report Disposition Date,RpDispDt,Report Disposition Date
+#13,Notifications,Notifs,Notifications
+#14,Child Age at Report,ChAge,Child Age at Report
+#15,Child Sex,ChSex,Child Sex
+#16,Child Race American Indian or Alaska Native,ChRacAI,Child Race American Indian or Alaska Native
+#17,Child Race Asian,ChRacAs,Child Race Asian
+#18,Child Race Black or African American,ChRacBl,Child Race Black or African American
+#19,Child Race Native Hawaiian or Other Pacific Islander,ChRacNH,Child’s Race Native Hawaiian or Other Pacific Islander
+#20,Child Race White,ChRacWh,Child Race White
+#21,Child Race Unable to Determine,ChRacUD,Child Race Unable to Determine
+#22,Child Hispanic or Latino Ethnicity,CEthn,Child Hispanic or Latino Ethnicity
+#23,Child Living Arrangement,ChLvng,Child Living Arrangement
+#24,Military Family Member,ChMil,Military Family Member
+#25,Prior Victim,ChPrior,Prior Victim
+#26,Maltreatment 1 Type,ChMal1,Maltreatment 1 Type
+#27,Maltreatment 1 Disposition Level,Mal1Lev,Maltreatment 1 Disposition
+#28,Maltreatment 2 Type,ChMal2,Maltreatment 2 Type
+#29,Maltreatment 2 Disposition Level,Mal2Lev,Maltreatment 2 Disposition
+#30,Maltreatment 3 Type,ChMal3,Maltreatment 3 Type
+#31,Maltreatment 3 Disposition Level,Mal3Lev,Maltreatment 3 Disposition
+#32,Maltreatment 4 Type,ChMal4,Maltreatment 4 Type
+#33,Maltreatment 4 Disposition Level,Mal4Lev,Maltreatment 4 Disposition
+#34,Maltreatment Death,MalDeath,Maltreatment Death
+#35,Alcohol Abuse-Child,CdAlc,Alcohol Abuse-Child
+#36,Drug Abuse-Child,CdDrug,Drug Abuse-Child
+#37,Intellectual Disability-Child,CdRtrd,Intellectual Disability-Child
+#38,Emotional Disturbance-Child,CdEmotnl,Emotional Disturbance-Child
+#39,Visual or Hearing Impairment-Child,CdVisual,Visual or Hearing Impairment-Child
+#40,Learning Disability-Child,CdLearn,Learning Disability-Child
+#41,Physical Disability-Child,CdPhys,Physical Disability-Child
+#42,Behavior Problem-Child,CdBehav,Behavior Problem-Child
+#43,Other Medical Condition-Child,CdMedicl,Other Medical Condition-Child
+#44,Alcohol Abuse-Caregiver(s),FCAlc,Alcohol Abuse-Caregiver(s)
+#45,Drug Abuse-Caregiver(s),FCDrug,Drug Abuse-Caregiver(s)
+#46,Intellectual Disability-Caregiver(s),FCRtrd,Intellectual Disability-Caregiver(s)
+#47,Emotional Disturbance-Caregiver(s),FCEmotnl,Emotional Disturbance-Caregiver(s)
+#48,Visual or Hearing ImpairmentCaregiver(s),FCVisual,Visual or Hearing Impairment-Caregiver(s)
+#49,Learning Disability-Caregiver(s),FCLearn,Learning Disability-Caregiver(s)
+#50,Physical Disability-Caregiver(s),FCPhys,Physically Disability-Caregiver(s)
+#51,Other Medical Condition-Caregiver(s),FCMedicl,Other Medical Condition-Caregiver(s)
+#52,Domestic Violence,FCViol,Domestic Violence
+#53,Inadequate Housing,FCHouse,Inadequate Housing
+#54,Financial Problems,FCMoney,Financial Problems
+#55,Public Assistance,FCPublic,Public Assistance
+#56,Post-Investigation Services,PostServ,Post-Investigation Services
+#57,Service Date,ServDate,Service Date
+#58,Family Support Services,FamSup,Family Support Services
+#59,Family Preservation Services,FamPres,Family Preservation Services
+#60,Foster Care Services,FosterCr,Foster Care Services
+#61,Removal Date,RmvDate,Removal Date
+#62,Juvenile Court Petition,JuvPet,Juvenile Court Petition
+#63,Petition Date,PetDate,Petition Date
+#64,Court-Appointed Representative,CoChRep,Court-Appointed Representative
+#65,Adoption Services,Adopt,Adoption Services
+#66,Case Management Services,CaseMang,Case Management Services
+#67,Counseling Services,Counsel,Counseling Services
+#68,Day Care Services-Child,Daycare,Day Care Services-Child
+#69,Educational and Training Services,Educatn,Educational and Training Services
+#70,Employment Services,Employ,Employment Services
+#71,Family Planning Services,FamPlan,Family Planning Services
+#72,Health-Related and Home Health Services,Health,Health-Related and Home Health Services
+#73,Home-Based Services,Homebase,Home-Based Services
+#74,Housing Services,Housing,Housing Services
+#75,Independent and Transitional Living Services,TransLiv,Independent and Transitional Living Services
+#76,Information and Referral Services,InfoRef,Information and Referral Services
+#77,Legal Services,Legal,Legal Services
+#78,Mental Health Services,MentHlth,Mental Health Services
+#79,Pregnancy and Parenting Services for Young Parents,PregPar,Pregnancy and Parenting Services for Young Parents
+#80,Respite Care Services,Respite,Respite Care Services
+#81,Special Services-Disabled,SSDisabl,Special Services-Disabled
+#82,Special Services-Juvenile Delinquent,SSDelinq,Special Services-Juvenile Delinquent
+#83,Substance Abuse Services,SubAbuse,Substance Abuse Services
+#84,Transportation Services,Transprt,Transportation Services
+#85,Other Services,OtherSv,Other Services
+#86,Perpetrator 1 ID,Per1ID,Perpetrator 1 ID
+#87,Perpetrator 1 Relationship,Per1Rel,Perpetrator 1 Relationship
+#88,Perpetrator 1 as Parent,Per1Prnt,Perpetrator 1 as Parent
+#89,Perpetrator 1 as Caregiver,Per1Cr,Perpetrator 1 as Caregiver
+#90,Perpetrator 1 Age at Report,Per1Age,Perpetrator 1 Age at Report
+#91,Perpetrator 1 Sex,Per1Sex,Perpetrator 1 Sex
+#92,Perpetrator 1 Race American Indian or Alaska Native,P1RacAI,Perpetrator 1 Race American Indian or Alaska Native
+#93,Perpetrator 1 Race Asian,P1RacAs,Perpetrator 1 Race Asian
+#94,Perpetrator 1 Race Black or African American,P1RacBl,Perpetrator 1 Race Black or African American
+#95,Perpetrator 1 Race Native Hawaiian or Other Pacific Islander,P1RacNH,Perpetrator 1 Race Native Hawaiian or Other Pacific Islander
+#96,Perpetrator 1 Race White,P1RacWh,Perpetrator 1 Race White
+#97,Perpetrator 1 Race Undetermined,P1RacUd,Perpetrator 1 Race Undetermined
+#98,Perpetrator 1 Ethnicity Hispanic or Latino,Per1Ethn,Perpetrator 1 Ethnicity Hispanic or Latino
+#99,Perpetrator 1 Military Member,Per1Mil,Perpetrator 1 Military Member
+#100,Perpetrator 1 Prior Abuser,Per1Pior,Perpetrator 1 Prior Abuser
+#101,Perpetrator 1-Maltreatment 1,Per1Mal1,Perpetrator 1-Maltreatment 1
+#102,Perpetrator 1-Maltreatment 2,Per1Mal2,Perpetrator 1-Maltreatment 2
+#103,Perpetrator 1-Maltreatment 3,Per1Mal3,Perpetrator 1-Maltreatment 3
+#104,Perpetrator 1-Maltreatment 4,Per1Mal4,Perpetrator 1-Maltreatment 4
+#105,Perpetrator 2 ID,Per2ID,Perpetrator 2 ID
+#106,Perpetrator 2 Relationship,Per2Rel,Perpetrator 2 Relationship
+#107,Perpetrator 2 as Parent,Per2Prnt,Perpetrator 2 as Parent
+#108,Perpetrator 2 as Caregiver,Per2Cr,Perpetrator 2 as Caregiver
+#109,Perpetrator 2 Age at Report,Per2Age,Perpetrator 2 Age at Report
+#110,Perpetrator 2 Sex,Per2Sex,Perpetrator 2 Sex
+#111,Perpetrator 2 Race American Indian or Alaska Native,P2RacAI,Perpetrator 2 Race American Indian or Alaska Native
+#112,Perpetrator 2 Race Asian,P2RacAs,Perpetrator 2 Race Asian
+#113,Perpetrator 2 Race Black or African American,P2RacBl,Perpetrator 2 Race Black or African American
+#114,Perpetrator 2 Race Native Hawaiian or Other Pacific Islander,P2RacNH,Perpetrator 2 Race Native Hawaiian or Other Pacific Islander
+#115,Perpetrator 2 Race White,P2RacWh,Perpetrator 2 Race White
+#116,Perpetrator 2 Race Undetermined,P2RacUd,Perpetrator 2 Race Undetermined
+#117,Perpetrator 2 Ethnicity Hispanic or Latino,Per2Ethn,Perpetrator 2 Ethnicity Hispanic or Latino
+#118,Perpetrator 2 Military Member,Per2Mil,Perpetrator 2 Military Member
+#119,Perpetrator 2 Prior Abuser,Per2Pior,Perpetrator 2 Prior Abuser
+#120,Perpetrator 2-Maltreatment 1,Per2Mal1,Perpetrator 2-Maltreatment 1
+#121,Perpetrator 2-Maltreatment 2,Per2Mal2,Perpetrator 2-Maltreatment 2
+#122,Perpetrator 2-Maltreatment 3,Per2Mal3,Perpetrator 2-Maltreatment 3
+#123,Perpetrator 2-Maltreatment 4,Per2Mal4,Perpetrator 2-Maltreatment 4
+#124,Perpetrator 3 ID,Per3ID,Perpetrator 3 ID
+#125,Perpetrator 3 Relationship,Per3Rel,Perpetrator 3 Relationship
+#126,Perpetrator 3 as Parent,Per3Prnt,Perpetrator 3 as Parent
+#127,Perpetrator 3 as Caregiver,Per3Cr,Perpetrator 3 as Caregiver
+#128,Perpetrator 3 Age at Report,Per3Age,Perpetrator 3 Age at Report
+#129,Perpetrator 3 Sex,Per3Sex,Perpetrator 3 Sex
+#130,Perpetrator 3 Race American Indian or Alaska Native,P3RacAI,Perpetrator 3 Race American Indian or Alaska Native
+#131,Perpetrator 3 Race Asian,P3RacAs,Perpetrator 3 Race Asian
+#132,Perpetrator 3 Race Black or African American,P3RacBl,Perpetrator 3 Race Black or African American
+#133,Perpetrator 3 Race Native Hawaiian or Other Pacific Islander,P3RacNH,Perpetrator 3 Race Native Hawaiian or Other Pacific Islander
+#134,Perpetrator 3 Race White,P3RacWh,Perpetrator 3 Race White
+#135,Perpetrator 3 Race Undetermined,P3RacUd,Perpetrator 3 Race Undetermined
+#136,Perpetrator 3 Ethnicity Hispanic or Latino,Per3Ethn,Perpetrator 3 Ethnicity Hispanic or Latino
+#137,Perpetrator 3 Military Member,Per3Mil,Perpetrator 3 Military Member
+#138,Perpetrator 3 Prior Abuser,Per3Pior,Perpetrator 3 Prior Abuser
+#139,Perpetrator 3-Maltreatment 1,Per3Mal1,Perpetrator 3-Maltreatment 1
+#140,Perpetrator 3-Maltreatment 2,Per3Mal2,Perpetrator 3-Maltreatment 2
+#141,Perpetrator 3-Maltreatment 3,Per3Mal3,Perpetrator 3-Maltreatment 3
+#142,Perpetrator 3-Maltreatment 4,Per3Mal4,Perpetrator 3-Maltreatment 4
+#143,AFCARS ID,AFCARSID,AFCARS ID
+#144,Foster Care Discharge Date,FCDchDt,Foster Care Discharge Date
+#145,Derived: Child is a Victim on this Report,RptVictim,Child is a Victim on this Report
+#146,Derived: State Foster Care ID,StFCID,State Foster Care ID
+#147,Has a Plan of Safe Care,PlnsFCr,Has a Plan of Safe Care
+#148,Referral to Appropriate Services,RefrCARA,Referral to Appropriate Services
+#149,Rural Urban Continuum Code,RU13,Rural Urban Continuum Code
+#150,Derived: Child Race,Race,Child Race without Ethnicity
+#151,Derived: Child Race and Ethnicity,RaceEthn,Child Race and Ethnicity
+#152,State’s Data Version,Version,State’s Data Version
+#153,Derived: Infant with Prenatal Substance Exposure,IsIPSE,Infant with Prenatal Substance Exposure
