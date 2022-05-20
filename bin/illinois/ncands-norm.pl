@@ -7,7 +7,7 @@ use Text::CSV_XS qw( csv );
 use File::Slurper qw( read_lines );
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
-use QIC::Utils qw( parse_date_iso read_json trim );
+use QIC::Utils qw( parse_date_mdy_cat read_json trim );
 
 my $ncands_fields = csv(
     in      => "$FindBin::Bin/../../eval/ncands-vars.csv",
@@ -30,6 +30,7 @@ my %MAP = (
     "NOTIFS"                 => "Notifs",
     "CHAGE"                  => "ChAge",
     "CHBATE"                 => "DOB",
+    "CHDOB"                  => "DOB",
     "CHSEX"                  => "ChSex",
     "CHRACAI"                => "ChRacAI",
     "CHRACAS"                => "ChRacAs",
@@ -43,13 +44,17 @@ my %MAP = (
     "CHMIL"                  => "ChMil",
     "CHPRIOR"                => "ChPrior",
     "CHMAL1"                 => "ChMal1",
+    "MAL1EV"                 => "Mal1Lev",
     "MAL1LEV"                => "Mal1Lev",
     "CHMAL2"                 => "ChMal2",
+    "MAL2EV"                 => "Mal2Lev",
     "MAL2LEV"                => "Mal2Lev",
     "CHMAL3"                 => "ChMal3",
     "MAL3LEV"                => "Mal3Lev",
+    "MAL3EV"                 => "Mal3Lev",
     "CHMAL4"                 => "ChMal4",
     "MAL4LEV"                => "Mal4Lev",
+    "MAL4EV"                 => "Mal4Lev",
     "MALDEATH"               => "MalDeath",
     "CDALC"                  => "CdAlc",
     "CDDRUG"                 => "CdDrug",
@@ -66,6 +71,7 @@ my %MAP = (
     "FCEMOTNL"               => "FCEmotnl",
     "FCVISUAL"               => "FCVisual",
     "FCLEARN"                => "FCLearn",
+    "FCDLEARN"               => "FCLearn",
     "FCPHYS"                 => "FCPhys",
     "FCMEDICL"               => "FCMedicl",
     "FCVIOL"                 => "FCViol",
@@ -216,6 +222,15 @@ sub norm_rec {
             $normed->{$k} = $rec->{$k};
             next;
         }
+
+        # skip empties
+        if ( $MAP{$k} eq "" ) {
+            next;
+        }
+        if ( exists $normed->{ $MAP{$k} } ) {
+            warn "$file: Duplicate mappings to same target field $MAP{$k}";
+            next;
+        }
         $normed->{ $MAP{$k} } = $rec->{$k};
     }
 
@@ -224,7 +239,7 @@ sub norm_rec {
     }
 
     for my $f (@dates) {
-        $normed->{$f} = parse_date_iso( $normed->{$f} );
+        $normed->{$f} = parse_date_mdy_cat( $normed->{$f} );
     }
 
     return $normed;

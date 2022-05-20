@@ -465,6 +465,7 @@ sub norm_rec {
             $normed->{$k} = $rec->{$k};
             next;
         }
+        next if $MAP{$k} eq "";
         $normed->{ $MAP{$k} } = $rec->{$k};
     }
 
