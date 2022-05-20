@@ -515,6 +515,10 @@ sub norm_rec {
 
     }
 
+    for my $k ( keys %$normed ) {
+        trim( $normed->{$k} );
+    }
+
     return $normed;
 }
 
