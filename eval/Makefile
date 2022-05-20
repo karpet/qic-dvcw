@@ -5,15 +5,19 @@ build:
 	perl ../bin/load-afcars-db.pl ../2022-evaluation/Administrative*/Illinois/normalized/*csv
 	perl ../bin/load-afcars-db.pl ../2022-evaluation/Administrative*/Massachusetts/AFCARS/normalized/*csv
 
-norm: norm-mass norm-ill
+a-norm: norm-mass norm-ill
 
-norm-mass:
+a-norm-mass:
 	perl ../bin/mass/afcars-norm.pl ../2022-evaluation/Administrative*/Massachusetts/AFCARS/*json
 	mv ../2022-evaluation/Administrative*/Massachusetts/AFCARS/*-norm.csv ../2022-evaluation/Administrative*/Massachusetts/AFCARS/normalized/
 
-norm-ill:
+a-norm-ill:
 	perl ../bin/illinois/afcars-norm.pl ../2022-evaluation/Administrative*/Illinois/*json
 	mv ../2022-evaluation/Administrative*/Illinois/*-norm.csv ../2022-evaluation/Administrative*/Illinois/normalized/
 
+n-norm-mass:
+	perl ../bin/mass/ncands-norm.pl ../2022-evaluation/Administrative*/Massachusetts/Intakes*/NCANDS*json
+	mv ../2022-evaluation/Administrative*/Massachusetts/Intakes*/*-norm.csv ../2022-evaluation/Administrative*/Massachusetts/Intakes*/normalized/
 
-.PHONY: db-reset build norm norm-ill norm-mass
+
+.PHONY: db-reset build a-norm a-norm-ill a-norm-mass n-norm-mass

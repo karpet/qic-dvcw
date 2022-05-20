@@ -78,7 +78,7 @@ sub parse_date_ymd {
     my $date = shift or return undef;
 
     my ( $year2, $month, $day )
-        = ( $date =~ m,^(\d+)/(\d+)/(\d+), );    # "72/3/29"
+        = ( $date =~ m,^(\d+)[\-/](\d+)[\-/](\d+), );    # "72/3/29"
 
     if ( length($year2) > 2 and $year2 < 1900 ) {
 
@@ -95,7 +95,7 @@ sub parse_date_ymd {
 sub parse_date_mdy {
     my $date = shift or return undef;
 
-    my ( $month, $day, $year2 ) = ( $date =~ m,^(\d+)/(\d+)/(\d+), );
+    my ( $month, $day, $year2 ) = ( $date =~ m,^(\d+)[\-/](\d+)[\-/](\d+), );
     my $year = $year2 > 22 ? "19$year2" : "20$year2";
     $year = $year2 if $year2 > 1900;
     $day   = "0$day"   if length($day) == 1;
