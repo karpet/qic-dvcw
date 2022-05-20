@@ -9,10 +9,11 @@ use Text::CSV_XS qw( csv );
 use Data::Dump qw( dump );
 use DBIx::InsertHash;
 use DBI;
+use Term::ProgressBar;
 
 my $dbfile = "$FindBin::Bin/../eval/ncands.db";
 my $dbh    = DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
-    { RaiseError => 1, } );
+    { RaiseError => 1, AutoCommit => 1, } );
 my $children = DBIx::InsertHash->new(
     quote => 1,
     dbh   => $dbh,
@@ -178,17 +179,17 @@ sub get_report {
 }
 
 sub get_perps {
-    my $row = shift;
+    my $row   = shift;
     my @perps = ();
-    for my $n ((1, 2, 3)) {
+    for my $n ( ( 1, 2, 3 ) ) {
         next unless $row->{"Per${n}ID"};
-        my $perp = {id => $row->{"Per${n}ID"}};
+        my $perp = { id => $row->{"Per${n}ID"} };
         for my $f (@PERP_FIELDS) {
             $perp->{$f} = $row->{$f};
         }
         for my $f (@PERP_ATTRS) {
             my $field = "Per${n}$f";
-            if ($f =~ /Rac/) {
+            if ( $f =~ /Rac/ ) {
                 $field = "P${n}$f";
             }
             $perp->{$f} = $row->{$field};
@@ -208,15 +209,24 @@ for my $csv_file (@ARGV) {
 
     my $rows = csv( in => $csv_file, headers => "auto" );
 
+    printf( "Found %s rows\n", scalar(@$rows) );
+    my $progress = Term::ProgressBar->new(
+        { count => scalar(@$rows), ETA => 'linear', } );
+
+    $dbh->begin_work;
+
     for my $row (@$rows) {
         my $child = get_child($row);
         next unless $child;
         my $report = get_report($row);
         $report->{filename} = $csv_file;
-        $reports->insert($report) unless $report_ids{$report->{id}}++;
+        $reports->insert($report) unless $report_ids{ $report->{id} }++;
         $children->insert($child);
-        for my $p (get_perps($row)) {
+        for my $p ( get_perps($row) ) {
             $perps->insert($p);
         }
+        $progress->update();
     }
+
+    $dbh->commit;
 }
