@@ -24,17 +24,10 @@ my $reports = DBIx::InsertHash->new(
     dbh   => $dbh,
     table => 'reports',
 );
-my $perps = DBIx::InsertHash->new(
-    quote => 1,
-    dbh   => $dbh,
-    table => 'perps',
-);
 
 my @CHILD_FIELDS = qw(
-    SubYr
     StaTerr
     ChID
-    ChAge
     ChSex
     ChRacAI
     ChRacAs
@@ -43,6 +36,30 @@ my @CHILD_FIELDS = qw(
     ChRacWh
     ChRacUd
     CEthn
+    AFCARSID
+    DOB
+);
+
+my @REPORT_FIELDS = qw(
+    SubYr
+    StaTerr
+    RptID
+    RptFIPS
+    RptDt
+    RptTm
+    InvDate
+    InvStrTm
+    RptSrc
+    RptDisp
+    RpDispDt
+    Notifs
+    PlnsFCr
+    RefrCARA
+    RU13
+    IsIPSE
+    RpDispDt
+    ChID
+    ChAge
     ChLvng
     ChMil
     ChPrior
@@ -110,32 +127,6 @@ my @CHILD_FIELDS = qw(
     FCDchDt
 );
 
-my @REPORT_FIELDS = qw(
-    SubYr
-    StaTerr
-    RptID
-    RptFIPS
-    RptDt
-    RptTm
-    InvDate
-    InvStrTm
-    RptSrc
-    RptDisp
-    RpDispDt
-    Notifs
-    PlnsFCr
-    RefrCARA
-    RU13
-    IsIPSE
-);
-
-my @PERP_FIELDS = qw(
-    SubYr
-    StaTerr
-    ChID
-    RptID
-);
-
 my @PERP_ATTRS = qw(
     ID
     Rel
@@ -161,7 +152,7 @@ my @PERP_ATTRS = qw(
 sub get_child {
     my $row = shift;
     return unless $row->{ChID};
-    my $child = { id => join( "-", $row->{ChID}, $row->{RptID} ), };
+    my $child = {};
     for my $f (@CHILD_FIELDS) {
         $child->{$f} = $row->{$f};
     }
@@ -171,35 +162,24 @@ sub get_child {
 sub get_report {
     my $row = shift;
     return unless $row->{RptID};
-    my $report = { id => $row->{RptID} };
+    my $report = {};
     for my $f (@REPORT_FIELDS) {
         $report->{$f} = $row->{$f};
     }
-    return $report;
-}
-
-sub get_perps {
-    my $row   = shift;
-    my @perps = ();
     for my $n ( ( 1, 2, 3 ) ) {
         next unless $row->{"Per${n}ID"};
-        my $perp = { id => $row->{"Per${n}ID"} };
-        for my $f (@PERP_FIELDS) {
-            $perp->{$f} = $row->{$f};
-        }
         for my $f (@PERP_ATTRS) {
             my $field = "Per${n}$f";
             if ( $f =~ /Rac/ ) {
                 $field = "P${n}$f";
             }
-            $perp->{$f} = $row->{$field};
+            $report->{$field} = $row->{$field};
         }
-        push @perps, $perp;
     }
-    return @perps;
+    return $report;
 }
 
-my %report_ids = ();
+my %child_ids = ();
 
 for my $csv_file (@ARGV) {
     print "Loading: $csv_file\n";
@@ -220,11 +200,8 @@ for my $csv_file (@ARGV) {
         next unless $child;
         my $report = get_report($row);
         $report->{filename} = $csv_file;
-        $reports->insert($report) unless $report_ids{ $report->{id} }++;
-        $children->insert($child);
-        for my $p ( get_perps($row) ) {
-            $perps->insert($p);
-        }
+        $reports->insert($report);
+        $children->insert($child) unless $child_ids{$child->{ChID}}++;
         $progress->update();
     }
 

@@ -152,6 +152,8 @@ for my $csv_file (@ARGV) {
 
     my $rows = csv( in => $csv_file, headers => "auto" );
 
+    $dbh->begin_work;
+
     for my $row (@$rows) {
         my $child = get_child($row);
         next unless $child;
@@ -160,4 +162,6 @@ for my $csv_file (@ARGV) {
         $children->insert($child) unless $child_ids{ $child->{id} }++;
         $episodes->insert($episode);
     }
+
+    $dbh->commit;
 }
