@@ -15,7 +15,7 @@ create table children (
   ChRacBl integer,
   ChRacNH integer,
   ChRacWh integer,
-  ChRacUd integer,
+  ChRacUD integer,
   CEthn integer,
   AFCARSID varchar(32)
 );
@@ -117,7 +117,7 @@ create table reports (
   P1RacBl integer,
   P1RacBH integer,
   P1RacWh integer,
-  P1RacUD integer,
+  P1RacUd integer,
   Per1Ethn integer,
   Per1Mil integer,
   Per1Pior integer,
@@ -136,7 +136,7 @@ create table reports (
   P2RacBl integer,
   P2RacBH integer,
   P2RacWh integer,
-  P2RacUD integer,
+  P2RacUd integer,
   Per2Ethn integer,
   Per2Mil integer,
   Per2Pior integer,
@@ -155,7 +155,7 @@ create table reports (
   P3RacBl integer,
   P3RacBH integer,
   P3RacWh integer,
-  P3RacUD integer,
+  P3RacUd integer,
   Per3Ethn integer,
   Per3Mil integer,
   Per3Pior integer,
@@ -167,6 +167,7 @@ create table reports (
 
 create index reports_uniq_idx on reports(ChID, RptID);
 create index reports_afcarsid_idx on reports(AFCARSID);
+create index reports_disp_dt_idx on reports(RpDispDt);
 -- create unique index reports_uniq_ids_file_idx on reports(ChID, RptID, filename);
 create unique index children_chid_idx on children(ChID);
 create index children_afcarsid_idx on children(AFCARSID);

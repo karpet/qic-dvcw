@@ -17,15 +17,22 @@ my $dbh    = DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
     { RaiseError => 1, } );
 
 my $reports_sth = $dbh->prepare(
-    "select * from reports where ChID = ? order by RptDt asc");
-my $children_sth = $dbh->prepare("select * from children");
+    "select * from reports where ChID = ? order by RptID asc, RpDispDt asc");
+my $children_sth;
 
-$children_sth->execute();
+if (@ARGV) {
+    $children_sth = $dbh->prepare("select * from children where ChID in (?)");
+    $children_sth->execute(@ARGV);
+}
+else {
+    $children_sth = $dbh->prepare("select * from children");
+    $children_sth->execute();
+}
 
 my @dates = qw(
     RptDt
     InvDate
-    RpDistDt
+    RpDispDt
     ServDate
     RmvDate
     PetDate
@@ -42,7 +49,7 @@ my @CHILD_FIELDS = qw(
     ChRacBl
     ChRacNH
     ChRacWh
-    ChRacUd
+    ChRacUD
     CEthn
     AFCARSID
 );
@@ -141,7 +148,7 @@ my @REPORT_FIELDS = qw(
     P1RacBl
     P1RacBH
     P1RacWh
-    P1RacUD
+    P1RacUd
     Per1Ethn
     Per1Mil
     Per1Pior
@@ -160,7 +167,7 @@ my @REPORT_FIELDS = qw(
     P2RacBl
     P2RacBH
     P2RacWh
-    P2RacUD
+    P2RacUd
     Per2Ethn
     Per2Mil
     Per2Pior
@@ -179,7 +186,7 @@ my @REPORT_FIELDS = qw(
     P3RacBl
     P3RacBH
     P3RacWh
-    P3RacUD
+    P3RacUd
     Per3Ethn
     Per3Mil
     Per3Pior
@@ -204,8 +211,6 @@ $report_csv->print( $report_fh, \@REPORT_FIELDS );
 
 my $DEBUG = $ENV{DEBUG} || 0;
 
-# we want the most "complete" (i.e. final) report row for each Removal.
-# we know there's a new Removal each time TotalRem increments.
 while ( my $child = $children_sth->fetchrow_hashref() ) {
     $reports_sth->execute( $child->{ChID} );
     my $reports = $reports_sth->fetchall_arrayref( {} );
@@ -213,21 +218,34 @@ while ( my $child = $children_sth->fetchrow_hashref() ) {
     my $previous_report;
     my @complete_reports = ();
     for my $report (@$reports) {
-        $DEBUG and dump $report;
-        $DEBUG and printf( "%s-%s\n", $report->{RptDt}, $report->{RptTm} );
+
+        # $DEBUG and dump $report;
+        $DEBUG and printf( "%s %s %s-%s\n",
+            $report->{RptID}, $report->{RpDispDt},
+            $report->{RptDt}, $report->{RptTm} );
         for my $date (@dates) {
-            $DEBUG and printf( "%8s %10s  ", $date, $report->{$date} );
+
+            #$DEBUG and printf( "%8s %10s  ", $date, $report->{$date} );
         }
+        $previous_report ||= $report;
+
+        if ( $previous_report->{RptID} ne $report->{RptID} ) {
+            push @complete_reports, $previous_report;
+        }
+
         $previous_report = $report;
 
-        $DEBUG and print "\n";
+        # $DEBUG and print "\n";
     }
-    push @complete_reports,
-        $previous_report;    # last one is always most complete
+
+    # last one is always most complete
+    push @complete_reports, $previous_report;
 
     for my $report (@complete_reports) {
 
-        $DEBUG and dump $report;
+        #$DEBUG and dump $report;
+        $DEBUG and printf( "complete %s %s %s\n",
+            $report->{RptID}, $report->{RptDt}, $report->{RpDispDt} );
         $report_csv->print_hr( $report_fh, $report );
     }
 
