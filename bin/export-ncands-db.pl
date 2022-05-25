@@ -287,6 +287,7 @@ while ( my $child = $children_sth->fetchrow_hashref() ) {
 
         my $extras = JSON::decode_json( delete $report->{extras} );
         for my $k ( keys %$extras ) {
+            next if exists $report->{$k};
             $report->{$k} = $extras->{$k};
         }
 

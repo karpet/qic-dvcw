@@ -211,6 +211,7 @@ while ( my $child = $children_sth->fetchrow_hashref() ) {
         $episode->{StFCID} = $episode->{child_id};
         my $extras = JSON::decode_json( delete $episode->{extras} );
         for my $k ( keys %$extras ) {
+            next if exists $episode->{$k};
             $episode->{$k} = $extras->{$k};
         }
 

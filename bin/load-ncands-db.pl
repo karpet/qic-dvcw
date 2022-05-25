@@ -34,7 +34,7 @@ my @CHILD_FIELDS = qw(
     ChRacBl
     ChRacNH
     ChRacWh
-    ChRacUd
+    ChRacUD
     CEthn
     AFCARSID
     DOB
@@ -139,7 +139,7 @@ my @PERP_ATTRS = qw(
     RacBl
     RacBH
     RacWh
-    RacUD
+    RacUd
     Ethn
     Mil
     Pior
@@ -167,7 +167,6 @@ sub get_report {
         $report->{$f} = $row->{$f};
     }
     for my $n ( ( 1, 2, 3 ) ) {
-        next unless $row->{"Per${n}ID"};
         for my $f (@PERP_ATTRS) {
             my $field = "Per${n}$f";
             if ( $f =~ /Rac/ ) {
