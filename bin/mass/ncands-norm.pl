@@ -16,11 +16,6 @@ my @csv_header = map { $_->{name} } @$ncands_fields;
 push @csv_header, "DOB";    # unofficial
 
 my %MAP = (
-    "QIC Investigation ID"           => "",
-    "QIC Person ID"                  => "",
-    "REGION_NAME"                    => "",
-    "AREA_NAME"                      => "",
-    "QIC Case ID"                    => "",
     "E01_SUBYR"                      => "SubYr",
     "E02_STATERR"                    => "StaTerr",
     "E03_RPT_ID"                     => "RptID",
@@ -481,6 +476,7 @@ sub norm_rec {
     remap( $normed, "Per2Sex", \%sex );
     remap( $normed, "Per3Sex", \%sex );
     remap( $normed, "ChLvng",  \%living );
+
     for my $f (@maltreatment_fields) {
         remap( $normed, $f, \%maltreatments );
     }
@@ -503,7 +499,7 @@ sub norm_rec {
     }
 
     for my $f (@ethnicity) {
-        if ( !$normed->{$f} ) { warn "$f undefined"; next; }
+        if ( !$normed->{$f} )               { warn "$f undefined"; next; }
         if ( lc( $normed->{$f} ) eq "n/a" ) { $normed->{$f} = "" }
         if ( lc( $normed->{$f} ) eq "not hispanic or latino" ) {
             $normed->{$f} = 2;
@@ -524,14 +520,18 @@ sub norm_rec {
 }
 
 for my $json_file (@ARGV) {
-    my $buf      = read_json($json_file);
+    my $buf       = read_json($json_file);
+    my $first_rec = $buf->[0];
+    my %not_in_map
+        = map { $_ => $_ } grep { $_ and !exists $MAP{$_} } keys %$first_rec;
+    my $header   = [ @csv_header, keys %not_in_map ];
     my $csv_file = $json_file;
     $csv_file =~ s/\.json$/-norm.csv/;
     my $csv
         = Text::CSV_XS->new( { binary => 1, eol => $/, auto_diag => 1, } );
-    $csv->column_names( \@csv_header );
+    $csv->column_names($header);
     open my $fh, ">:encoding(utf8)", $csv_file or die "$csv_file: $!";
-    $csv->print( $fh, \@csv_header );
+    $csv->print( $fh, $header );
 
     for my $rec (@$buf) {
         my $normed = norm_rec( $json_file, $rec );

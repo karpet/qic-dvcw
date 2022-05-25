@@ -134,7 +134,7 @@ sub norm_rec {
         $normed->{RepDatMo} = $rep_month;
         $normed->{RepDatYr} = $rep_year;
     }
-    else {
+    elsif ( exists $rec->{E2RptPrdEndCCYYMM} ) {
         my ( $rep_year, $rep_month )
             = ( $rec->{E2RptPrdEndCCYYMM} =~ /^(\d\d\d\d)(\d\d)/ );
         $normed->{RepDatMo} = $rep_month;
@@ -153,14 +153,18 @@ sub norm_rec {
 }
 
 for my $json_file (@ARGV) {
-    my $buf      = read_json($json_file);
+    my $buf       = read_json($json_file);
+    my $first_rec = $buf->[0];
+    my %not_in_map
+        = map { $_ => $_ } grep { $_ and !exists $MAP{$_} } keys %$first_rec;
+    my $header   = [ @CSV_HEADER, keys %not_in_map ];
     my $csv_file = $json_file;
     $csv_file =~ s/\.json$/-norm.csv/;
     my $csv
         = Text::CSV_XS->new( { binary => 1, eol => $/, auto_diag => 1, } );
-    $csv->column_names( \@CSV_HEADER );
+    $csv->column_names($header);
     open my $fh, ">:encoding(utf8)", $csv_file or die "$csv_file: $!";
-    $csv->print( $fh, \@CSV_HEADER );
+    $csv->print( $fh, $header );
 
     for my $rec (@$buf) {
         my $normed = norm_rec( $json_file, $rec );

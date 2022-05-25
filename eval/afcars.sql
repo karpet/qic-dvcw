@@ -104,6 +104,7 @@ create table episodes (
   SSIOther integer,
   NOA integer,
   FCMntPay integer,
+  extras text,
   foreign key (child_id) references children(id) on delete cascade
 );
 

@@ -4,15 +4,18 @@ a-db-reset:
 a-build:
 	perl ../bin/load-afcars-db.pl ../2022-evaluation/Administrative*/Illinois/normalized/AFCARS*csv
 	perl ../bin/load-afcars-db.pl ../2022-evaluation/Administrative*/Massachusetts/AFCARS/normalized/*csv
+	perl ../bin/load-afcars-db.pl ../2022-evaluation/penn-afcars-norm.csv
 
-a-norm: norm-mass norm-ill
+a-norm: a-norm-mass a-norm-ill
 
 a-norm-mass:
+	rm -rf ./2022-evaluation/Administrative*/Massachusetts/AFCARS/normalized/*csv
 	perl ../bin/mass/afcars-norm.pl ../2022-evaluation/Administrative*/Massachusetts/AFCARS/*json
 	mv ../2022-evaluation/Administrative*/Massachusetts/AFCARS/*-norm.csv ../2022-evaluation/Administrative*/Massachusetts/AFCARS/normalized/
 
 a-norm-ill:
-	perl ../bin/illinois/afcars-norm.pl ../2022-evaluation/Administrative*/Illinois/*json
+	rm -rf ../2022-evaluation/Administrative*/Illinois/normalized/AFCARS*-norm.csv
+	perl ../bin/illinois/afcars-norm.pl ../2022-evaluation/Administrative*/Illinois/AFCARS*json
 	mv ../2022-evaluation/Administrative*/Illinois/*-norm.csv ../2022-evaluation/Administrative*/Illinois/normalized/
 
 n-norm-mass:
@@ -22,6 +25,8 @@ n-norm-mass:
 n-norm-ill:
 	perl ../bin/illinois/ncands-norm.pl ../2022-evaluation/Administrative*/Illinois/NCANDS*json
 	mv ../2022-evaluation/Administrative*/Illinois/NCANDS*-norm.csv ../2022-evaluation/Administrative*/Illinois/normalized/
+
+n-norm: n-norm-mass n-norm-ill
 
 n-db-reset:
 	rm ncands.db && sqlite3 ncands.db < ncands.sql

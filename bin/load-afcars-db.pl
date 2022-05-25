@@ -11,7 +11,7 @@ use DBIx::InsertHash;
 use DBI;
 
 my $dbfile = "$FindBin::Bin/../eval/afcars.db";
-my $dbh = DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
+my $dbh    = DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
     { RaiseError => 1, } );
 my $children = DBIx::InsertHash->new(
     quote => 1,
@@ -159,6 +159,13 @@ for my $csv_file (@ARGV) {
         next unless $child;
         my $episode = get_episode($row);
         $episode->{filename} = $csv_file;
+        my %extras = ();
+        for my $k (keys %$row) {
+            if ( !exists $episode->{$k} and !exists $child->{$k} ) {
+                $extras{$k} = $row->{$k};
+            }
+        }
+        $episode->{extras} = JSON::encode_json( \%extras );
         $children->insert($child) unless $child_ids{ $child->{id} }++;
         $episodes->insert($episode);
     }

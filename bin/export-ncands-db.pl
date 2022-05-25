@@ -196,6 +196,44 @@ my @REPORT_FIELDS = qw(
     Per3Mal4
 );
 
+# extras fields as individual columns
+my @mass_extras = (
+    "QIC Person ID",
+    "QIC Investigation ID",
+    "REGION_NAME",
+    "AREA_NAME",
+    "QIC Case ID"
+);
+my @ill_extras = qw(
+    cd_find
+    PER3ID_id_pers
+    PER2ID_id_pers
+    ID_INVST_CASE
+    DT_DCSD ID_SCR_SEQ
+    SUPRVID_id_pers
+    DT_INVST_RPT
+    CYCIS_SERV_DATE
+    DT_INCDT
+    PER1ID_id_pers
+    DT_FIND
+    TM_INVST_RPT
+    CYCIS_RMVL_DATE
+    ID_INVST
+    CYCIS_PET_DATE
+    chid_id_pers
+    id_org_ent
+    DT_OF_BIRTH
+    LIVAR_END_DT
+    AFCARSID_cycis_case_id
+    WRKRID_id_pers
+    ID_INVST_SUBJ
+);
+my @pa_extras = (
+
+);
+
+push @REPORT_FIELDS, @mass_extras, @ill_extras, @pa_extras;
+
 my $child_csv
     = Text::CSV_XS->new( { binary => 1, eol => $/, auto_diag => 1, } );
 my $report_csv
@@ -246,6 +284,12 @@ while ( my $child = $children_sth->fetchrow_hashref() ) {
         #$DEBUG and dump $report;
         $DEBUG and printf( "complete %s %s %s\n",
             $report->{RptID}, $report->{RptDt}, $report->{RpDispDt} );
+
+        my $extras = JSON::decode_json( delete $report->{extras} );
+        for my $k ( keys %$extras ) {
+            $report->{$k} = $extras->{$k};
+        }
+
         $report_csv->print_hr( $report_fh, $report );
     }
 

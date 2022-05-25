@@ -200,8 +200,15 @@ for my $csv_file (@ARGV) {
         next unless $child;
         my $report = get_report($row);
         $report->{filename} = $csv_file;
+        my %extras = ();
+        for my $k ( keys %$row ) {
+            if ( !exists $report->{$k} and !exists $child->{$k} ) {
+                $extras{$k} = $row->{$k};
+            }
+        }
+        $report->{extras} = JSON::encode_json( \%extras );
         $reports->insert($report);
-        $children->insert($child) unless $child_ids{$child->{ChID}}++;
+        $children->insert($child) unless $child_ids{ $child->{ChID} }++;
         $progress->update();
     }
 

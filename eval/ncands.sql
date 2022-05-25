@@ -162,7 +162,8 @@ create table reports (
   Per3Mal1 integer,
   Per3Mal2 integer,
   Per3Mal3 integer,
-  Per3Mal4 integer
+  Per3Mal4 integer,
+  extras text
 );
 
 create index reports_uniq_idx on reports(ChID, RptID);
