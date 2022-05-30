@@ -35,5 +35,17 @@ n-build:
 	perl ../bin/load-ncands-db.pl ../2022-evaluation/Administrative*/Illinois/normalized/NCANDS*csv
 	perl ../bin/load-ncands-db.pl ../2022-evaluation/Administrative*/Massachusetts/Intakes*/normalized/*csv
 
+d3-norm-mass:
+	perl ../bin/mass/d3-norm.pl ../2022-evaluation/Administrative*/Massachusetts/DV*/*json
+	mv ../2022-evaluation/Administrative*/Massachusetts/DV*/*-norm.csv ../2022-evaluation/Administrative*/Massachusetts/DV*/normalized/
+
+d5-norm-mass:
+	perl ../bin/mass/d5-norm.pl ../2022-evaluation/Administrative*/Massachusetts/Worker*/*json
+	mv ../2022-evaluation/Administrative*/Massachusetts/Worker*/*-norm.csv ../2022-evaluation/Administrative*/Massachusetts/Worker*/normalized/
+
+d5-norm-ill:
+	perl ../bin/illinois/d5-norm.pl ../2022-evaluation/Administrative*/Illinois/DV-*json
+	mv ../2022-evaluation/Administrative*/Illinois/DV-*-norm.csv ../2022-evaluation/Administrative*/Illinois/normalized/
+
 
 .PHONY: a-db-reset a-build a-norm a-norm-ill a-norm-mass n-norm-mass n-norm-ill n-db-reset n-build
