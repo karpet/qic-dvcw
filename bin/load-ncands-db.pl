@@ -137,7 +137,7 @@ my @PERP_ATTRS = qw(
     RacAI
     RacAs
     RacBl
-    RacBH
+    RacNH
     RacWh
     RacUd
     Ethn

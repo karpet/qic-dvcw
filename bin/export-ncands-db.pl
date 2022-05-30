@@ -146,7 +146,7 @@ my @REPORT_FIELDS = qw(
     P1RacAI
     P1RacAs
     P1RacBl
-    P1RacBH
+    P1RacNH
     P1RacWh
     P1RacUd
     Per1Ethn
@@ -165,7 +165,7 @@ my @REPORT_FIELDS = qw(
     P2RacAI
     P2RacAs
     P2RacBl
-    P2RacBH
+    P2RacNH
     P2RacWh
     P2RacUd
     Per2Ethn
@@ -184,7 +184,7 @@ my @REPORT_FIELDS = qw(
     P3RacAI
     P3RacAs
     P3RacBl
-    P3RacBH
+    P3RacNH
     P3RacWh
     P3RacUd
     Per3Ethn
