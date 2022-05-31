@@ -47,5 +47,12 @@ d5-norm-ill:
 	perl ../bin/illinois/d5-norm.pl ../2022-evaluation/Administrative*/Illinois/DV-*json
 	mv ../2022-evaluation/Administrative*/Illinois/DV-*-norm.csv ../2022-evaluation/Administrative*/Illinois/normalized/
 
+ds-db-reset:
+	rm datasets.db && sqlite3 datasets.db < datasets.sql
+
+ds-build:
+	perl ../bin/mass/load-d5-db.pl ../2022-evaluation/Administrative*/Massachusetts/Worker*/normalized/*csv
+	perl ../bin/illinois/load-d5-db.pl ../2022-evaluation/Administrative*/Illinois/normalized/DV-*csv
+
 
 .PHONY: a-db-reset a-build a-norm a-norm-ill a-norm-mass n-norm-mass n-norm-ill n-db-reset n-build

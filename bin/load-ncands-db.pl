@@ -211,5 +211,7 @@ for my $csv_file (@ARGV) {
         $progress->update();
     }
 
+    $progress->update(scalar(@$rows)); # always go to 100%
+
     $dbh->commit;
 }

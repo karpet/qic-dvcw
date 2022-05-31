@@ -219,12 +219,14 @@ sub norm_rec {
         $normed->{$f} = parse_date_mdy_cat( $normed->{$f} );
     }
 
-    if ( !$normed->{SubYr} ) {
+    if ( !$normed->{SubYr} and $normed->{RpDispDt} ) {
         if ( $normed->{RpDispDt} =~ /^2014/ ) {
             $normed->{SubYr} = "2014";
-        } elsif ( $normed->{RpDispDt} =~ /^2015/) {
+        }
+        elsif ( $normed->{RpDispDt} =~ /^2015/ ) {
             $normed->{SubYr} = "2015";
-        } elsif ( $normed->{RpDispDt} =~ /^2013/) {
+        }
+        elsif ( $normed->{RpDispDt} =~ /^2013/ ) {
             $normed->{SubYr} = "2014";
         }
     }

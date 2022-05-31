@@ -10,9 +10,9 @@ use lib "$FindBin::Bin/../../lib";
 use QIC::Utils qw( parse_date_mdy_cat read_json trim );
 
 my %MAP = (
-    "CYCIS Case ID"              => "CYCIS_case_id",   # TODO child_state_id ?
-    "Person ID"                  => "person_id",
-    "NCANDS encrypted Person ID" => "NCANDS_id",
+    "CYCIS Case ID"              => "CYCIS_case_id",   # ID_CYCIS in NCANDS csv files, RecNumbr in AFCARS
+    "Person ID"                  => "person_id", # ID_INVST in NCANDS csv files, unless chid_id_pers is present?
+    "NCANDS encrypted Person ID" => "NCANDS_id", # AFCARSID in NCANDS csv files
     "SACWIS Case ID"             => "SACWIS_case_id",  # TODO child_state_id ?
     "ID_FAM_GRP"                 => "fam_group_id",    # TODO child_state_id
     "CRTKR1ID"                   => "CRTKR1ID",
