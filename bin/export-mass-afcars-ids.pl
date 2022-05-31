@@ -20,9 +20,16 @@ my %ids;
 while ( my $afcars = $afcars_sth->fetchrow_hashref() ) {
     # dump $afcars;
     my ($state, $rec_number) = split("-", $afcars->{id});
-    next if $ids{$rec_number}++;
+    $ids{$rec_number} ||= {};
     my $e = JSON::decode_json($afcars->{extras});
     my $person_id = $e->{"QIC Person ID"};
     my $case_id = $e->{"QIC Case ID"};
-    printf("%s,%s,%s,%s\n", $state, $rec_number, $person_id, $case_id);
+    $ids{$rec_number}->{person_id} ||= $person_id;
+    $ids{$rec_number}->{case_id} ||= $case_id;
+}
+
+for my $rec_number (sort keys %ids) {
+    my $person_id = $ids{$rec_number}->{person_id};
+    my $case_id = $ids{$rec_number}->{case_id};
+    printf("25,%s,%s,%s\n", $rec_number, $person_id, $case_id);
 }

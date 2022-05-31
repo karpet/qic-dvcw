@@ -23,7 +23,7 @@ my $afcars_ids = csv(
 
 # hashify by the QIC person ID
 my %afcars_lookup = map { $_->{rec_number} => $_ } @$afcars_ids;
-my %ncands_lookup = map { $_->{ncands_id} => $_ } @$ncands_ids;
+my %ncands_lookup = map { $_->{ncands_id}  => $_ } @$ncands_ids;
 
 my $dbfile = "$FindBin::Bin/../../eval/datasets.db";
 my $dbh    = DBI->connect( "dbi:SQLite:dbname=$dbfile", "", "",
@@ -39,6 +39,7 @@ my %missing;
 sub get_afcars_id {
     my $rec = shift;
     if ( !exists $ncands_lookup{ $rec->{child_state_id} } ) {
+
         # warn "no AFCARS ID for QIC Person ID " . $rec->{child_state_id};
         $missing{afcars}++;
         return;
@@ -49,13 +50,14 @@ sub get_afcars_id {
 sub get_ncands_id {
     my $rec = shift;
     if ( !exists $ncands_lookup{ $rec->{child_state_id} } ) {
+
         # warn "no NCANDS ID for QIC Person ID " . $rec->{child_state_id};
         $missing{ncands}++;
         return;
     }
     my $ncands_id = $ncands_lookup{ $rec->{child_state_id} }->{ncands_id};
     my $afcars_id = $ncands_lookup{ $rec->{child_state_id} }->{afcars_id};
-    if ( $afcars_id ne $rec->{afcars_id} ) {
+    if ( $rec->{afcars_id} and $afcars_id ne $rec->{afcars_id} ) {
         die
             "Found NCANDS ID but associated AFCARS ID $afcars_id does not match: "
             . dump($rec);
@@ -86,8 +88,8 @@ for my $csv_file (@ARGV) {
             case_id          => $row->{SACWIS_case_id},
             state            => "IL"
         };
-        $rec->{afcars_id} = get_afcars_id($rec) or next;
-        $rec->{ncands_id} = get_ncands_id($rec) or next;
+        $rec->{afcars_id} = get_afcars_id($rec);
+        $rec->{ncands_id} = get_ncands_id($rec);
         $ds5->insert($rec);
         $progress->update();
     }

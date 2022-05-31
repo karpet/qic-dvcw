@@ -8,7 +8,7 @@ create table ds5 (
   id integer primary key,
   state char(2) not null,
   child_state_id varchar(64) not null, -- e.g. QIC Person ID
-  case_id varchar(64) not null, -- e.g. QIC Case ID
+  case_id varchar(64), -- e.g. QIC Case ID
   month char(7) not null,
   in_person_visits integer not null default 0,
   video_visits integer not null default 0,

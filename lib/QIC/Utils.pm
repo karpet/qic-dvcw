@@ -3,6 +3,7 @@ use strict;
 use JSON;
 use File::Slurper qw( read_text write_text read_binary );
 use Exporter qw(import);
+use Time::Piece;
 
 our @EXPORT = qw(
     write_json
@@ -16,6 +17,7 @@ our @EXPORT = qw(
     parse_date_mdy
     parse_date_iso
     parse_date_mdy_cat
+    parse_date_abbrev
     age
     numerify
     trim
@@ -61,6 +63,12 @@ sub trim {
     $_[0] =~ s/^\s+|\s+$//g;
 }
 
+sub parse_date_abbrev {
+    my $date = shift or return undef;
+    my $t    = Time::Piece->strptime( $date, "%b/%d/%Y" );
+    return $t->strftime("%Y-%m-%d");
+}
+
 sub parse_date {
     my $date = shift or return undef;
 
@@ -98,7 +106,7 @@ sub parse_date_mdy {
 
     my ( $month, $day, $year2 ) = ( $date =~ m,^(\d+)[\-/](\d+)[\-/](\d+), );
     my $year = $year2 > 22 ? "19$year2" : "20$year2";
-    $year = $year2 if $year2 > 1900;
+    $year  = $year2    if $year2 > 1900;
     $day   = "0$day"   if length($day) == 1;
     $month = "0$month" if length($month) == 1;
     return "$year-$month-$day";
@@ -106,7 +114,7 @@ sub parse_date_mdy {
 
 sub parse_date_iso {
     my $date = shift or return undef;
-    if ($date =~ m/^(\d\d\d\d)(\d\d)(\d\d)$/) {
+    if ( $date =~ m/^(\d\d\d\d)(\d\d)(\d\d)$/ ) {
         return "$1-$2-$3";
     }
     return parse_date($date);
