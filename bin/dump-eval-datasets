@@ -1,0 +1,29 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use Path::Class::Dir;
+
+my $usage  = "$0 outdir";
+my $out    = shift(@ARGV) or die $usage;
+my @tables = qw(ds5);
+my $outdir = Path::Class::Dir->new($out);
+$outdir->mkpath;
+
+my $dbfile = "$FindBin::Bin/../eval/datasets.db";
+
+for my $table (@tables) {
+    my $to_csv
+        = "sqlite3 -header -csv $dbfile 'select * from $table;' > $outdir/$table.csv";
+    run($to_csv);
+}
+
+run("zip -er $outdir.zip $outdir");
+
+sub run {
+    my $cmd = shift;
+    print $cmd, $/;
+    system($cmd) and die "$cmd failed: $!";
+}
+
