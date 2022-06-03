@@ -35,7 +35,7 @@ for my $csv_file (@ARGV) {
     $dbh->begin_work;
 
     for my $row (@$rows) {
-        my $rec = { %$row, state => "MA" };
+        my $rec = { %$row, state => "PA" };
         $ds5->insert($rec);
         $progress->update();
     }
