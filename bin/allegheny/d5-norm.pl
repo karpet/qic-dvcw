@@ -99,10 +99,11 @@ for my $json_file (@ARGV) {
 
         my $k = "$month:$id";
         next if exists $monthlies{$k};
+        next unless $normed->{contact_method} =~ /face to face|video conf/i;
         $monthlies{$k}->{in_person_visits}++
-            if $normed->{contact_method} !~ /video/i;
+            if $normed->{contact_method} =~ /face to face/i;
         $monthlies{$k}->{video_visits}++
-            if $normed->{contact_method} =~ /video/i;
+            if $normed->{contact_method} =~ /video conf/i;
     }
 
     for my $k ( sort keys %monthlies ) {
