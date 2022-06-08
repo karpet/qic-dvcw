@@ -36,7 +36,9 @@ n-build:
 	perl ../bin/load-ncands-db.pl ../2022-evaluation/Administrative*/Massachusetts/Intakes*/normalized/*csv
 
 d2-norm-ac:
-	perl ../bin/allegheny/d2-norm.pl 2022-evaluation/Administrative*/Allegheny*/data-set-2a-referral-level.json 2022-evaluation/Administrative*/Allegheny*/data-set-2b-client-level.json 2022-evaluation/Administrative*/Allegheny*/Data-Set-2C_Allegation-Level.json
+	perl ../bin/allegheny/d2-norm.pl ../2022-evaluation/Administrative*/Allegheny*/data-set-2a-referral-level.json \
+  ../2022-evaluation/Administrative*/Allegheny*/data-set-2b-client-level.json \
+  ../2022-evaluation/Administrative*/Allegheny*/Data-Set-2C_Allegation-Level.json
 
 d3-norm-mass:
 	perl ../bin/mass/d3-norm.pl ../2022-evaluation/Administrative*/Massachusetts/DV*/*json
