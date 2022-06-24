@@ -44,12 +44,15 @@ d3-norm-mass:
 	perl ../bin/mass/d3-norm.pl ../2022-evaluation/Administrative*/Massachusetts/DV*/*json
 	mv ../2022-evaluation/Administrative*/Massachusetts/DV*/*-norm.csv ../2022-evaluation/Administrative*/Massachusetts/DV*/normalized/
 
+d3-norm-ill:
+	perl ../bin/illinois/d3-norm.pl ../2022-evaluation/Administrative*/Illinois/dv-data-set-3*
+
 d5-norm-mass:
 	perl ../bin/mass/d5-norm.pl ../2022-evaluation/Administrative*/Massachusetts/Worker*/*json
 	mv ../2022-evaluation/Administrative*/Massachusetts/Worker*/*-norm.csv ../2022-evaluation/Administrative*/Massachusetts/Worker*/normalized/
 
 d5-norm-ill:
-	perl ../bin/illinois/d5-norm.pl ../2022-evaluation/Administrative*/Illinois/DV-*json
+	perl ../bin/illinois/d5-norm.pl ../2022-evaluation/Administrative*/Illinois/DV-Dataset-5*json
 	mv ../2022-evaluation/Administrative*/Illinois/DV-*-norm.csv ../2022-evaluation/Administrative*/Illinois/normalized/
 
 d5-norm-ac:
