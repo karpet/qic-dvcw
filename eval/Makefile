@@ -47,6 +47,9 @@ d3-norm-mass:
 d3-norm-ill:
 	perl ../bin/illinois/d3-norm.pl ../2022-evaluation/Administrative*/Illinois/dv-data-set-3*
 
+d3-norm-ac:
+	perl ../bin/allegheny/d3-norm.pl ../2022-evaluation/Administrative*/Allegheny*/Data-Set-3-A-Case-Level.json ../2022-evaluation/Administrative*/Allegheny*/Data-Set-3-B-Individual-Level.json
+
 d5-norm-mass:
 	perl ../bin/mass/d5-norm.pl ../2022-evaluation/Administrative*/Massachusetts/Worker*/*json
 	mv ../2022-evaluation/Administrative*/Massachusetts/Worker*/*-norm.csv ../2022-evaluation/Administrative*/Massachusetts/Worker*/normalized/
