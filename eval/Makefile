@@ -4,7 +4,7 @@ a-db-reset:
 a-build:
 	perl ../bin/load-afcars-db.pl ../2022-evaluation/Administrative*/Illinois/normalized/AFCARS*csv
 	perl ../bin/load-afcars-db.pl ../2022-evaluation/Administrative*/Massachusetts/AFCARS/normalized/*csv
-	perl ../bin/load-afcars-db.pl ../2022-evaluation/penn-afcars-norm.csv
+	perl ../bin/load-afcars-db.pl ../2022-evaluation/Administrative*/PA-afcars/Kansas-Data-Request_AFCARS-Longitudinal-File-2-csv/sheet1-norm.csv
 
 a-norm: a-norm-mass a-norm-ill
 

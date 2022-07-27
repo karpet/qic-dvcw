@@ -60,6 +60,8 @@ my %MAP = (
     "Removal Reason: Inadequate Housing"                  => "Housing",
     "Placement Setting Type (final placement of episode)" => "CurPlSet",
     "Most Recent Case Plan Goal"                          => "CaseGoal",
+    "Date of Discharge from Foster Care"                  => "DoDFCDt",
+    "Reason for Discharge"                                => "DISREASN",
 );
 
 # warn just once per file
